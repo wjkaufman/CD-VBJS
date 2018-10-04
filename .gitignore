@@ -1,0 +1,7 @@
+data/*
+
+*.DS_Store
+*.zip
+*.tiff
+*.pdf
+*.docx
