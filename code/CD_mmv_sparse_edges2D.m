@@ -1,3 +1,11 @@
+%%%
+%
+% Modifications (adding CD algorithm at the end) by Will Kaufman (2018)
+%
+% code and helper functions from Theresa Scarnati (2018)
+%
+%%%
+
 clear all;
 close all;
 addpath('helper_functs');
@@ -6,7 +14,7 @@ addpath('helper_functs');
 
 N = 128; 
 num_meas = 5; 
-num_false = 0; 
+num_chgd = 2; 
 eps = .1; 
 lam = .25; 
 order = 2;
@@ -37,16 +45,17 @@ set(gca,'fontname','times','fontsize',16);
 % noise
 noise = std_noise*randn(N,N,num_meas);% + 1i*std_noise*randn(N,N,M);
 
-% false data
-F_FALSE = zeros(N,N,num_meas);
-for ii = 1:num_false
-    u = -1 + 2*rand(1); % random number between -1 and 1
-    [X,Y] = meshgrid(x,y);
-    f_false = randi([round(dyn_range(1)), round(dyn_range(2))],1).*(X<=u) +...
-        randi([round(dyn_range(1)), round(dyn_range(2))],1).*(Y>u);
-    F_FALSE(:,:,ii) = f_false;
-    figure(20); imagesc(f_false+f,dyn_range); pause(0.4);
-end
+% changed data, goes at the front of the list of measurements
+F_CHGD = zeros(N,N,num_meas);
+% make consistent change for last num_chgd measurements
+u = -.75; du = .1;
+v = -.1; dv = .1;
+[X,Y] = meshgrid(x,y);
+f_chgd = 5*(X >= u & X <= (u+du) & Y >= v & Y <= (v+dv)); % I think fine
+F_CHGD(:,:,(num_meas-num_chgd+1):num_meas) = repmat(f_chgd, 1, 1, num_chgd);
+figure(20); imagesc(f_chgd+f,dyn_range);
+
+% add false information too (one step at a time though)
 
 % forward operator
 A  = randn(N,N);
@@ -71,7 +80,8 @@ PAf_meas = zeros(N,N,num_meas);
 PAf_meas_vec = zeros(N^2,num_meas);
 figure; plot(x,f(:,N/2),'k--','linewidth',1.25); hold on;
 for ii = 1:num_meas
-    tmp = f+F_FALSE(:,:,ii);
+    sprintf('on iter %d', ii)
+    tmp = f+F_CHGD(:,:,ii);
     Y(:,:,ii) = reshape(A(tmp),N,N) + noise(:,:,ii);
     
     opts.mu =  1;%randi([1,10],1); % data
@@ -91,11 +101,20 @@ set(h,'interpreter','latex','fontsize',18);
 set(gca,'fontname','times','fontsize',16);
 
 %% optimal data vector
-[j_star,meas_mat] = get_VWJSdata(reshape(f_meas,N^2,num_meas));
+% only want to get best _reference_ image, so just look through that
+% TODO: or do I just want to manually set j_star = 1? A priori reason
+% that this should be our reference (we're calling this t=0)...
+[j_star,meas_mat] = get_VWJSdata(reshape(f_meas(:,:,1:(num_meas)),N^2,num_meas));
+% [j_star,meas_mat] = get_VWJSdata(...
+%     reshape(f_meas(:,:,1:(num_meas - num_chgd)),N^2,num_meas-num_chgd));
+% data_js = Y(:,:,j_star);
+
+% manually set optimal data vector for CD
+j_star = 1;
 data_js = Y(:,:,j_star);
 
 figure; imagesc(meas_mat); 
-colorbar; 
+colorbar;
 h = xlabel('measurement number');
 set(h,'interpreter','latex','fontsize',18);
 h = ylabel('measurement number');
