@@ -81,7 +81,7 @@ PAf_meas_vec = zeros(N^2,num_meas);
 figure; plot(x,f(:,N/2),'k--','linewidth',1.25); hold on;
 for ii = 1:num_meas
     sprintf('on iter %d', ii)
-    tmp = f+F_CHGD(:,:,ii);
+    tmp = f+F_CHGD(:,:,ii); % add change to data
     Y(:,:,ii) = reshape(A(tmp),N,N) + noise(:,:,ii);
     
     opts.mu =  1;%randi([1,10],1); % data
@@ -104,7 +104,8 @@ set(gca,'fontname','times','fontsize',16);
 % only want to get best _reference_ image, so just look through that
 % TODO: or do I just want to manually set j_star = 1? A priori reason
 % that this should be our reference (we're calling this t=0)...
-[j_star,meas_mat] = get_VWJSdata(reshape(f_meas(:,:,1:(num_meas)),N^2,num_meas));
+% I'm manually setting j_star, so replaced it in line below with `~`
+[~,meas_mat] = get_VWJSdata(reshape(f_meas(:,:,1:(num_meas)),N^2,num_meas));
 % [j_star,meas_mat] = get_VWJSdata(...
 %     reshape(f_meas(:,:,1:(num_meas - num_chgd)),N^2,num_meas-num_chgd));
 % data_js = Y(:,:,j_star);
@@ -175,41 +176,32 @@ imagesc(x,y,real(f_VBJS_wl1),dyn_range);
 axis xy image
 xticks([]); 
 yticks([]);
-%%
-% VBJS wl2
-opts_wl2.max_it = 100; 
-opts_wl2.tol = 1e-10; 
-opts_wl2.max_bt = 25; 
-opts_wl2.delta = 1e-5; 
-opts_wl2.rho = .4; 
-opts_wl2.order = order; 
-opts_wl2.tau = 1; 
-opts_wl2.lam = 1; 
-opts_wl2.disp = 0; 
-opts_wl2.dyn_range = dyn_range; 
-opts_wl2.f_init = A_mat\data_js; 
+% %%
+% % VBJS wl2
+% opts_wl2.max_it = 100; 
+% opts_wl2.tol = 1e-10; 
+% opts_wl2.max_bt = 25; 
+% opts_wl2.delta = 1e-5; 
+% opts_wl2.rho = .4; 
+% opts_wl2.order = order; 
+% opts_wl2.tau = 1; 
+% opts_wl2.lam = 1; 
+% opts_wl2.disp = 0; 
+% opts_wl2.dyn_range = dyn_range; 
+% opts_wl2.f_init = A_mat\data_js; 
+% 
+% [f_VBJS_wl2,out_wl2] = grad_descent_mmv(A,AH,data_js,10*W/max(max(W)),[N,N],opts_wl2); 
+% 
+% figure; colormap gray
+% imagesc(x,y,real(f_VBJS_wl2),dyn_range);
+% axis xy image
+% xticks([]); 
+% yticks([]);
+%% GLRT CD
 
-[f_VBJS_wl2,out_wl2] = grad_descent_mmv(A,AH,data_js,10*W/max(max(W)),[N,N],opts_wl2); 
+% make changed vector that records which measurements are "changed"
+changed = zeros(1, num_meas);
+changed((num_meas - num_chgd+1):end) = 1;
 
-figure; colormap gray
-imagesc(x,y,real(f_VBJS_wl2),dyn_range);
-axis xy image
-xticks([]); 
-yticks([]);
-%% compare results 
+change = GLRT2D(x, y, changed, f_meas, f_VBJS_wl1, 5);
 
-marker = {'k--','-.','-',':'};
-
-figure; plot(x,f(:,64),marker{1},'linewidth',1.5)
-hold on; plot(x,real(f_meas(:,64,j_star)),marker{4},'linewidth',1.5)
-hold on; plot(x,real(f_VBJS_wl1(64,:)),marker{2},'linewidth',1.5)
-hold on; plot(x,real(f_VBJS_wl2(:,64)),marker{3},'linewidth',1.5); 
-h = xlabel('$x$');
-xlim([min(x) max(x)]);
-set(h,'interpreter','latex','fontsize',18);
-h = ylabel('$f(x,0)$');
-set(h,'interpreter','latex','fontsize',18);
-set(gca,'fontname','times','fontsize',16);
-
-L = legend('True Function','SMV','VBJS $\ell_1$','VBJS $\ell_2$');
-set(L,'interpreter','latex','fontsize',14,'location','south');
