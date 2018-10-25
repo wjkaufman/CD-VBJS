@@ -19,7 +19,7 @@ f_norm = f_meas - f_VBJS;
 change = zeros(length(x), length(y));
 
 J = length(changed); % total number of measurements made
-Jp = sum(~changed); % total number of changed measurements
+Jp = sum(~changed); % total number of reference measurements
 
 % TODO: implement using blockproc instead?
 for i = 1:(length(x)-nbhdSize + 1)
@@ -28,15 +28,15 @@ for i = 1:(length(x)-nbhdSize + 1)
 
         numerator = abs(1/Jp*sum(f_norm(indX, indY,~changed).^2,'all'))^Jp * ...
                     abs(1/(J-Jp)*sum(f_norm(indX, indY, changed).^2,'all'))^(J-Jp);
-        denominator = abs(1/J*sum(f_norm(indX,indY,~changed).^2,'all') + ... % ref images
-                               sum(f_norm(indX,indY,changed).^2,'all'))^J; % changed images
+        denominator = abs(1/J*(sum(f_norm(indX,indY,~changed).^2,'all') + ... % ref images
+                               sum(f_norm(indX,indY, changed).^2,'all')))^J; % changed images
         
         % TODO: think about different hypothesis for multiple changed
         % images: see if all changed images are same, or if day1 ? day2
         % etc.
         
         change(i+floor(nbhdSize/2),j+floor(nbhdSize/2)) = ...
-            1- (numerator/denominator);
+            1-(numerator/denominator);
     end
 end
 

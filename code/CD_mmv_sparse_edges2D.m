@@ -32,9 +32,9 @@ x = linspace(-1,1,N);
 y = linspace(-1,1,N);
 
 figure;
-colormap gray
+colormap gray;
 imagesc(x,y,f,dyn_range);
-colorbar; axis xy image
+colorbar; axis xy image;
 h = xlabel('$x$');
 xlim([min(x) max(x)]);
 set(h,'interpreter','latex','fontsize',18);
@@ -53,7 +53,9 @@ v = -.1; dv = .1;
 [X,Y] = meshgrid(x,y);
 f_chgd = 5*(X >= u & X <= (u+du) & Y >= v & Y <= (v+dv)); % I think fine
 F_CHGD(:,:,(num_meas-num_chgd+1):num_meas) = repmat(f_chgd, 1, 1, num_chgd);
-figure(20); imagesc(f_chgd+f,dyn_range);
+figure(20); colormap gray;
+imagesc(f_chgd+f,dyn_range);
+colorbar; axis xy image;
 
 % add false information too (one step at a time though)
 
@@ -114,7 +116,7 @@ set(gca,'fontname','times','fontsize',16);
 j_star = 1;
 data_js = Y(:,:,j_star);
 
-figure; imagesc(meas_mat); 
+figure; imagesc(meas_mat);
 colorbar;
 h = xlabel('measurement number');
 set(h,'interpreter','latex','fontsize',18);
@@ -200,8 +202,9 @@ yticks([]);
 %% GLRT CD
 
 % make changed vector that records which measurements are "changed"
-changed = zeros(1, num_meas);
-changed((num_meas - num_chgd+1):end) = 1;
+changed = false(1, num_meas);
+changed((num_meas - num_chgd+1):end) = true;
 
 change = GLRT2D(x, y, changed, f_meas, f_VBJS_wl1, 5);
 
+figure; imagesc(change); colorbar;
