@@ -6,15 +6,15 @@
 %
 %%%
 
-clear all;
-close all;
+%clear all;
+%close all;
 addpath('helper_functs');
 
 %% parameters
 
-N = 128; 
-num_meas = 5; 
-num_chgd = 2; 
+N = 128;
+num_meas = 5;
+num_chgd = 2;
 eps = .1; 
 lam = .25; 
 order = 2;
@@ -26,7 +26,7 @@ funct = 'hill';
 % true image
 f = get_img(funct,N); 
 dyn_range = [min(min(f)),max(max(f))];
-std_noise = .55;%std(f(:))*1e-1; 
+std_noise = .55;%std(f(:))*1e-1;
 
 x = linspace(-1,1,N);
 y = linspace(-1,1,N);
@@ -54,19 +54,24 @@ v = -.1; dv = .1;
 f_chgd = 5*(X >= u & X <= (u+du) & Y >= v & Y <= (v+dv)); % I think fine
 F_CHGD(:,:,(num_meas-num_chgd+1):num_meas) = repmat(f_chgd, 1, 1, num_chgd);
 figure(20); colormap gray;
-imagesc(f_chgd+f,dyn_range);
+imagesc(x,y,f_chgd+f,dyn_range);
 colorbar; axis xy image;
+h = xlabel('$x$');
+xlim([min(x) max(x)]);
+set(h,'interpreter','latex','fontsize',18);
+h = ylabel('$y$');
+set(h,'interpreter','latex','fontsize',18);
+set(gca,'fontname','times','fontsize',16);
 
 % add false information too (one step at a time though)
 
 % forward operator
-A  = randn(N,N);
-d = 1./sqrt(sum(A.^2,2));
-A = A.*d; A_mat = A; 
-[A,AH] = get_handles(A,N);
+A = @(u) fft2(u) / sqrt(numel(u)); % A is Fourier operator
+AH = @(u) sqrt(numel(u)) * ifft2(u); % because apparently adjoint of Fourier operator
+                % is inverse
 
 % PA operator 
-PA = PA_Operator_1D(N,order); 
+PA = PA_Operator_1D(N,order);
 
 % noisy data and measurements 
 opts.outer_iter = 50; 
@@ -78,22 +83,27 @@ opts.data_mlp = true;
 
 Y = zeros(N,N,num_meas);
 f_meas = zeros(N,N,num_meas);
+f_jump = zeros(N,N,num_meas); % approximation to jump function
+            % calculated by concentration factors
 PAf_meas = zeros(N,N,num_meas);
 PAf_meas_vec = zeros(N^2,num_meas);
 figure; plot(x,f(:,N/2),'k--','linewidth',1.25); hold on;
 for ii = 1:num_meas
     sprintf('on iter %d', ii)
     tmp = f+F_CHGD(:,:,ii); % add change to data
-    Y(:,:,ii) = reshape(A(tmp),N,N) + noise(:,:,ii);
+    Y(:,:,ii) = A(tmp) + noise(:,:,ii);
     
-    opts.mu =  1;%randi([1,10],1); % data
-    opts.beta = 1;%randi([1,10],1); % l1
+    % old ADMM reconstructions, not doing that bc I want
+    % a linear transformation (to preserve noise)
+    %opts.mu =  1;%randi([1,10],1); % data
+    %opts.beta = 1;%randi([1,10],1); % l1
+    %[f_star,out] = ADMM2(A,AH,Y(:,:,ii),[N,N],opts);
     
-    [f_star,out] = ADMM2(A,AH,Y(:,:,ii),[N,N],opts); 
+    f_star = real(AH(Y(:,:,ii))); % do simple inverse Fourier sum
     f_meas(:,:,ii) = f_star;
     PAf_meas(:,:,ii) = real(PA*f_star + f_star*PA);
     PAf_meas_vec(:,ii) = col(PAf_meas(:,:,ii));
-    plot(x,f_meas(:,N/2,ii),'linewidth',1.25); 
+    plot(x,f_meas(N/2,:,ii),'linewidth',1.25);
 end
 h = xlabel('$x$');
 xlim([min(x) max(x)]);
@@ -138,7 +148,7 @@ v = var(PAf_meas_vec,1,2);
 v = reshape(v,N,N); 
 
 figure; imagesc(x,y,v);
-colorbar; axis xy image
+colorbar; axis xy image;
 h = xlabel('$x$');
 xlim([min(x) max(x)]);
 set(h,'interpreter','latex','fontsize',18);
