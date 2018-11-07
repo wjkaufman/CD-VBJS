@@ -83,8 +83,12 @@ opts.data_mlp = true;
 
 Y = zeros(N,N,num_meas);
 f_meas = zeros(N,N,num_meas);
-f_jump = zeros(N,N,num_meas); % approximation to jump function
+f_jump = zeros(N,N,num_meas, 2); % approximation to jump function
             % calculated by concentration factors
+k_vals = [0:N/2 -N/2+1:-1];
+l_vals = k_vals'; % might be different if image is not square
+k_mat = repmat(k_vals, N, 1);
+l_mat = repmat(l_vals, 1, N);
 PAf_meas = zeros(N,N,num_meas);
 PAf_meas_vec = zeros(N^2,num_meas);
 figure; plot(x,f(:,N/2),'k--','linewidth',1.25); hold on;
@@ -93,14 +97,19 @@ for ii = 1:num_meas
     tmp = f+F_CHGD(:,:,ii); % add change to data
     Y(:,:,ii) = A(tmp) + noise(:,:,ii);
     
-    % old ADMM reconstructions, not doing that bc I want
-    % a linear transformation (to preserve noise)
-    %opts.mu =  1;%randi([1,10],1); % data
-    %opts.beta = 1;%randi([1,10],1); % l1
-    %[f_star,out] = ADMM2(A,AH,Y(:,:,ii),[N,N],opts);
-    
     f_star = real(AH(Y(:,:,ii))); % do simple inverse Fourier sum
     f_meas(:,:,ii) = f_star;
+    
+    % and sparse domain calculation
+    
+    jump_x = real(AH(...
+        conc_factor(k_mat).*Y(:,:,ii)));
+    jump_y = real(AH(...
+        conc_factor(l_mat).*Y(:,:,ii)));
+    f_jump(:,:,ii,1) = jump_x;
+    f_jump(:,:,ii,2) = jump_y;
+    
+    % old code
     PAf_meas(:,:,ii) = real(PA*f_star + f_star*PA);
     PAf_meas_vec(:,ii) = col(PAf_meas(:,:,ii));
     plot(x,f_meas(N/2,:,ii),'linewidth',1.25);
@@ -112,12 +121,40 @@ h = ylabel('$f(x,0)$');
 set(h,'interpreter','latex','fontsize',18);
 set(gca,'fontname','times','fontsize',16);
 
+% TODO 
+% filter jump functions by comparing sign across all
+% measurement vectors: if same sign -> keep value
+% if different sign -> set jump to 0
+
+% plot jump function
+figure; colormap gray;
+imagesc(x,y,f_jump(:,:,5,1));
+colorbar; axis xy image;
+title('Jump function approx. in x direction');
+h = xlabel('$x$');
+xlim([min(x) max(x)]);
+set(h,'interpreter','latex','fontsize',18);
+h = ylabel('$y$');
+set(h,'interpreter','latex','fontsize',18);
+set(gca,'fontname','times','fontsize',16);
+
+figure; colormap gray;
+imagesc(x,y,f_jump(:,:,5,2));
+colorbar; axis xy image;
+title('Jump function approx. in y direction');
+h = xlabel('$x$');
+xlim([min(x) max(x)]);
+set(h,'interpreter','latex','fontsize',18);
+h = ylabel('$y$');
+set(h,'interpreter','latex','fontsize',18);
+set(gca,'fontname','times','fontsize',16);
+
 %% optimal data vector
 % only want to get best _reference_ image, so just look through that
 % TODO: or do I just want to manually set j_star = 1? A priori reason
 % that this should be our reference (we're calling this t=0)...
 % I'm manually setting j_star, so replaced it in line below with `~`
-[~,meas_mat] = get_VWJSdata(reshape(f_meas(:,:,1:(num_meas)),N^2,num_meas));
+% [~,meas_mat] = get_VWJSdata(reshape(f_meas(:,:,1:(num_meas)),N^2,num_meas));
 % [j_star,meas_mat] = get_VWJSdata(...
 %     reshape(f_meas(:,:,1:(num_meas - num_chgd)),N^2,num_meas-num_chgd));
 % data_js = Y(:,:,j_star);
@@ -126,20 +163,20 @@ set(gca,'fontname','times','fontsize',16);
 j_star = 1;
 data_js = Y(:,:,j_star);
 
-figure; imagesc(meas_mat);
-colorbar;
-h = xlabel('measurement number');
-set(h,'interpreter','latex','fontsize',18);
-h = ylabel('measurement number');
-set(h,'interpreter','latex','fontsize',18);
-set(gca,'fontname','times','fontsize',16);
+% figure; imagesc(meas_mat);
+% colorbar;
+% h = xlabel('measurement number');
+% set(h,'interpreter','latex','fontsize',18);
+% h = ylabel('measurement number');
+% set(h,'interpreter','latex','fontsize',18);
+% set(gca,'fontname','times','fontsize',16);
 
-figure;
-colormap gray
-imagesc(x,y,real(f_meas(:,:,j_star)),dyn_range);
-axis xy image
-xticks([]); 
-yticks([]);
+% figure;
+% colormap gray
+% imagesc(x,y,real(f_meas(:,:,j_star)),dyn_range);
+% axis xy image
+% xticks([]); 
+% yticks([]);
 
 %% variance and weights
 
