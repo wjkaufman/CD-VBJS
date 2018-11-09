@@ -6,4 +6,5 @@ function [sigma] = conc_factor(k)
 %%%%%%%%%%%%%%%%%%
 p=1;
 sigma = 1i*pi*p*k.^p; %1i*pi*p*k.^p;
+sigma = 2 * sigma / sqrt(numel(k)); % fix scaling issues
 end

@@ -7,7 +7,7 @@
 %%%
 
 %clear all;
-%close all;
+close all;
 addpath('helper_functs');
 
 %% parameters
