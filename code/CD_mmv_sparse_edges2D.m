@@ -24,7 +24,7 @@ funct = 'hill';
 %% problem setup 
 
 % true image
-f = get_img(funct,N); 
+f = get_img(funct,N);
 dyn_range = [min(min(f)),max(max(f))];
 std_noise = .55;%std(f(:))*1e-1;
 
@@ -66,8 +66,8 @@ set(gca,'fontname','times','fontsize',16);
 % add false information too (one step at a time though)
 
 % forward operator
-A = @(u) fft2(u) / sqrt(numel(u)); % A is Fourier operator
-AH = @(u) sqrt(numel(u)) * ifft2(u); % because apparently adjoint of Fourier operator
+A =  @(u) fft2(u) / sqrt(numel(u)); % A is Fourier operator
+AH = @(u) ifft2(u) *sqrt(numel(u)); % because apparently adjoint of Fourier operator
                 % is inverse
 
 % PA operator 
@@ -85,6 +85,7 @@ Y = zeros(N,N,num_meas);
 f_meas = zeros(N,N,num_meas);
 f_jump = zeros(N,N,num_meas, 2); % approximation to jump function
             % calculated by concentration factors
+            % (x,y,measurement, x-dir)
 k_vals = [0:N/2 -N/2+1:-1];
 l_vals = k_vals'; % might be different if image is not square
 k_mat = repmat(k_vals, N, 1);
@@ -181,10 +182,11 @@ data_js = Y(:,:,j_star);
 %% variance and weights
 
 % variance
-v = var(PAf_meas_vec,1,2);
-v = reshape(v,N,N); 
+v = var(f_jump,1,3);
+%v = reshape(v,N,N); 
 
-figure; imagesc(x,y,v);
+% plot variance in x direction
+figure; imagesc(x,y,v(:,:,1));
 colorbar; axis xy image;
 h = xlabel('$x$');
 xlim([min(x) max(x)]);
@@ -194,35 +196,58 @@ set(h,'interpreter','latex','fontsize',18);
 set(gca,'fontname','times','fontsize',16);
 
 % weights
-w = get_VWJSweights(PAf_meas_vec,.15);
-W = reshape(w,N,N);
+wx = get_VWJSweights(reshape(f_jump(:,:,:,1), N^2, num_meas),.15);
+wy = get_VWJSweights(reshape(f_jump(:,:,:,2), N^2, num_meas),.15);
+W = zeros(N,N, 2);
+W(:,:,1) = reshape(wx, N, N);
+W(:,:,2) = reshape(wy, N, N);
 
+figure; imagesc(x,y,W(:,:,1));
+axis xy image; colorbar;
+xticks([]); 
+yticks([]);
+
+figure; imagesc(x,y,W(:,:,2));
+axis xy image; colorbar;
+xticks([]); 
+yticks([]);
+
+% for now, just take the maximum of the weights (not sure
+%   how to do ADMM with two terms to minimize)
+
+W = min(W, [], 3);
 figure; imagesc(x,y,W);
-axis xy image
+title('min weight from both');
+axis xy image; colorbar;
 xticks([]); 
 yticks([]);
 
 %% reconstructions
 
+%W = ones(N,N);
+
+
 % VBJS wl1
-opts_wl1.mu =1 ; 
+opts_wl1.mu =1 ;
 opts_wl1.beta = 1; 
-opts_wl1.outer_iter = 50; 
-opts_wl1.inner_iter = 20; 
-opts_wl1.scale_b = true; 
-opts_wl1.scale_A = true; 
-opts_wl1.weighted = true; 
-opts_wl1.weights = W; 
+opts_wl1.outer_iter = 50;
+opts_wl1.inner_iter = 20;
+opts_wl1.scale_b = true;
+opts_wl1.scale_A = true;
+opts_wl1.weighted = true;
+opts_wl1.weights = W;
 opts_wl1.data_mlp = true;
 opts_wl1.disp = 0;
-opts_wl1.order = order; 
+opts_wl1.order = order;
 
+% normally AH instead of weird function handle
+%AH = @(u) sqrt(numel(u)) * ifft2(u)';
 [f_VBJS_wl1,out_wl1] = ADMM2(A,AH,data_js,[N,N],opts_wl1);
 
 figure;
 colormap gray
 imagesc(x,y,real(f_VBJS_wl1),dyn_range);
-axis xy image
+axis xy image; colorbar;
 xticks([]); 
 yticks([]);
 % %%
@@ -249,9 +274,9 @@ yticks([]);
 %% GLRT CD
 
 % make changed vector that records which measurements are "changed"
-changed = false(1, num_meas);
-changed((num_meas - num_chgd+1):end) = true;
-
-change = GLRT2D(x, y, changed, f_meas, f_VBJS_wl1, 5);
-
-figure; imagesc(change); colorbar;
+% changed = false(1, num_meas);
+% changed((num_meas - num_chgd+1):end) = true;
+% 
+% change = GLRT2D(x, y, changed, f_meas, f_VBJS_wl1, 5);
+% 
+% figure; imagesc(change); colorbar;
