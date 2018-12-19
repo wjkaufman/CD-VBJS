@@ -240,14 +240,14 @@ opts_wl1.data_mlp = true;
 opts_wl1.disp = 0;
 opts_wl1.order = order;
 
-% normally AH instead of weird function handle
-%AH = @(u) sqrt(numel(u)) * ifft2(u)';
+% TODO this reconstruction is not correct
 [f_VBJS_wl1,out_wl1] = ADMM2(A,AH,data_js,[N,N],opts_wl1);
 
 figure;
 colormap gray
 imagesc(x,y,real(f_VBJS_wl1),dyn_range);
 axis xy image; colorbar;
+title('ADMM reconstruction (incorrect, not sure why)')
 xticks([]); 
 yticks([]);
 % %%
