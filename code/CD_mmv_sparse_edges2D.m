@@ -66,8 +66,8 @@ set(gca,'fontname','times','fontsize',16);
 % add false information too (one step at a time though)
 
 % forward operator
-A =  @(u) fft2(u) / sqrt(numel(u)); % A is Fourier operator
-AH = @(u) ifft2(u) *sqrt(numel(u)); % because apparently adjoint of Fourier operator
+A =  @(u) fft2(reshape(u, N, N)) / sqrt(numel(u)); % A is Fourier operator
+AH = @(u) ifft2(reshape(u, N, N)) *sqrt(numel(u)); % because apparently adjoint of Fourier operator
                 % is inverse
 
 % PA operator 
