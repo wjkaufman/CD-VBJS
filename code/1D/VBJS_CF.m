@@ -9,11 +9,12 @@ addpath(genpath('helper_funct'));
 % parameters
 N = 128; % resolution 
 funct = 'sawtooth_mpi_pi'; % which function to reconstruct
-J = 10; % number of measurements 
+J = 10; % number of measurements
+Jprime = 5; % number of reference measurements
 dist = 'l2'; % distance function to use 
 disp = 1;  % for displaying figures
 PA_order = 2; % order of PA transform 
-SNR = 5; % signal to noise ratio 
+SNR = 20; % signal to noise ratio 
 
 %% Generate data
 
@@ -22,6 +23,10 @@ k = [0:N/2-1 N/2 -N/2+1:-1]';
 
 % function and grid
 [x,f_true] = get_funct(N,funct,k);
+
+% change in domain
+f_chg = zeros(size(f_true));
+f_chg(floor(N/5):floor(2*N/5)) = mean(abs(f_true));
 
 % forward model
 A = dftmtx(N);
@@ -39,12 +44,18 @@ order_cf = 2;
 
 if disp
     figure(1); hold on;
+    legendtext1 = cell(1,J);
     figure(2); hold on;
+    legendtext2 = cell(1,J);
 end
 
 for ii = 1:J
     
-    Y(:,ii) = A*f_true + noise(:,ii);
+    if ii <= Jprime
+        Y(:,ii) = A*f_true + noise(:,ii);
+    else
+        Y(:,ii) = A*(f_true + f_chg) + noise(:,ii);
+    end
     [f_tild(:,ii),sig(:,ii)] = dual_edge_fhat_multiorder_old(order_cf(end),N, Y(:,ii));
     
     if disp
@@ -65,14 +76,16 @@ if disp
 end
 %% VBJS
 
-[w,v] = get_VBJSweights_CF(f_tild);
+f_jump_ref = f_tild(:,1:Jprime);
+
+[w,v] = get_VBJSweights_CF(f_jump_ref);
 
 if strcmp(dist,'l2')
-    [j_star,meas_mat] = get_VBJSdata_l2(f_tild);
+    [j_star,meas_mat] = get_VBJSdata_l2(f_jump_ref);
 elseif strcmp(dist,'emd')
-    [j_star,meas_mat] = get_VBJSdata_emd(f_tild);
+    [j_star,meas_mat] = get_VBJSdata_emd(f_jump_ref);
 elseif strcmp(dist,'mhd')
-    [j_star,meas_mat] = get_VBJSdata_mh(f_tild);
+    [j_star,meas_mat] = get_VBJSdata_mh(f_jump_ref);
 end
 
 data_js = Y(:,j_star);
@@ -94,7 +107,7 @@ minimize( norm(W*PA*f_star_l1,1) + norm(A*f_star_l1 - data_js,2));
 cvx_end
 
 % l2 reg
-f_star_l2 = (A'*A+PA'*W'*W*PA)\(A'*data_js);
+f_star_l2 = (A'*A+PA'*(W'*W)*PA)\(A'*data_js);
 
 l2_error= norm(f_star_l2-f_true,2)/norm(f_true,2);
 l1_error = norm(f_star_l1-f_true,2)/norm(f_true,2);
@@ -118,3 +131,20 @@ if disp
     xlim([min(x),max(x)])
 end
 
+%% CD
+
+% individually reconstruct data using inverse Fourier transform
+f_meas = zeros(N, J);
+for ii = 1:J
+    f_meas(:,ii) = real(ifft(Y(:,ii))); % I think... TODO check
+end
+if disp
+    figure; plot(f_meas(:,[1, 6]));
+    title('individual reconstructions (measurement 1 and 6)');
+end
+
+[gamma] = glrt_1d(J, Jprime, x, f_meas, f_star_l1, 5);
+
+if disp
+    figure; plot(gamma); title('change statistic');
+end
