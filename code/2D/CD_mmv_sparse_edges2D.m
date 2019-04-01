@@ -1,6 +1,6 @@
 %%%
 %
-% Modifications (adding CD algorithm at the end) by Will Kaufman (2018)
+% Modifications (adding CD algorithm at the end) by Will Kaufman (2018-2019)
 %
 % code and helper functions from Theresa Scarnati (2018)
 %
@@ -64,6 +64,7 @@ set(h,'interpreter','latex','fontsize',18);
 set(gca,'fontname','times','fontsize',16);
 
 % add false information too (one step at a time though)
+% TODO _eventually_ add false information
 
 % forward operator
 A =  @(u) fft2(reshape(u, N, N)) / sqrt(numel(u)); % A is Fourier operator
@@ -74,12 +75,12 @@ AH = @(u) ifft2(reshape(u, N, N)) *sqrt(numel(u)); % because apparently adjoint 
 PA = PA_Operator_1D(N,order);
 
 % noisy data and measurements 
-opts.outer_iter = 50; 
-opts.inner_iter = 20; 
-opts.scale_b = false; 
-opts.scale_A = false; 
-opts.weighted = false; 
-opts.data_mlp = true; 
+% opts.outer_iter = 50; 
+% opts.inner_iter = 20; 
+% opts.scale_b = false; 
+% opts.scale_A = false; 
+% opts.weighted = false; 
+% opts.data_mlp = true; 
 
 Y = zeros(N,N,num_meas);
 f_meas = zeros(N,N,num_meas);
@@ -98,11 +99,10 @@ for ii = 1:num_meas
     tmp = f+F_CHGD(:,:,ii); % add change to data
     Y(:,:,ii) = A(tmp) + noise(:,:,ii);
     
-    f_star = real(AH(Y(:,:,ii))); % do simple inverse Fourier sum
+    f_star = real(AH(Y(:,:,ii))); % do inverse Fourier sum
     f_meas(:,:,ii) = f_star;
     
     % and sparse domain calculation
-    
     jump_x = real(AH(...
         conc_factor(k_mat).*Y(:,:,ii)));
     jump_y = real(AH(...
@@ -110,7 +110,7 @@ for ii = 1:num_meas
     f_jump(:,:,ii,1) = jump_x;
     f_jump(:,:,ii,2) = jump_y;
     
-    % old code
+    % old code (TODO still need?)
     PAf_meas(:,:,ii) = real(PA*f_star + f_star*PA);
     PAf_meas_vec(:,ii) = col(PAf_meas(:,:,ii));
     plot(x,f_meas(N/2,:,ii),'linewidth',1.25);
@@ -161,6 +161,7 @@ set(gca,'fontname','times','fontsize',16);
 % data_js = Y(:,:,j_star);
 
 % manually set optimal data vector for CD
+% TODO this should be changed, yes?
 j_star = 1;
 data_js = Y(:,:,j_star);
 
@@ -212,8 +213,9 @@ axis xy image; colorbar;
 xticks([]); 
 yticks([]);
 
-% for now, just take the maximum of the weights (not sure
+% for now, just take the minimum of the weights (not sure
 %   how to do ADMM with two terms to minimize)
+% TODO figure this out!
 
 W = min(W, [], 3);
 figure; imagesc(x,y,W);
@@ -225,7 +227,6 @@ yticks([]);
 %% reconstructions
 
 %W = ones(N,N);
-
 
 % VBJS wl1
 opts_wl1.mu =1 ;
