@@ -6,7 +6,7 @@
 %
 %%%
 
-%clear all;
+clear all;
 close all;
 addpath('helper_functs');
 
@@ -67,9 +67,9 @@ set(gca,'fontname','times','fontsize',16);
 % TODO _eventually_ add false information
 
 % forward operator
-A =  @(u) fft2(reshape(u, N, N)) / sqrt(numel(u)); % A is Fourier operator
-AH = @(u) ifft2(reshape(u, N, N)) *sqrt(numel(u)); % because apparently adjoint of Fourier operator
-                % is inverse
+% A is Fourier operator, AH is adjoint (= inverse)
+A =  @(u) reshape(fft2(reshape(u, N, N)) / sqrt(numel(u)), N^2, 1); 
+AH = @(u) reshape(ifft2(reshape(u, N, N)) *sqrt(numel(u)), N^2, 1);
 
 % PA operator 
 PA = PA_Operator_1D(N,order);
@@ -97,16 +97,16 @@ figure; plot(x,f(:,N/2),'k--','linewidth',1.25); hold on;
 for ii = 1:num_meas
     sprintf('on iter %d', ii)
     tmp = f+F_CHGD(:,:,ii); % add change to data
-    Y(:,:,ii) = A(tmp) + noise(:,:,ii);
+    Y(:,:,ii) = reshape(A(tmp), N, N) + noise(:,:,ii);
     
-    f_star = real(AH(Y(:,:,ii))); % do inverse Fourier sum
+    f_star = real(reshape(AH(Y(:,:,ii)), N, N)); % do inverse Fourier sum
     f_meas(:,:,ii) = f_star;
     
     % and sparse domain calculation
-    jump_x = real(AH(...
-        conc_factor(k_mat).*Y(:,:,ii)));
-    jump_y = real(AH(...
-        conc_factor(l_mat).*Y(:,:,ii)));
+    jump_x = real(reshape(AH(...
+        conc_factor(k_mat).*Y(:,:,ii)), N, N));
+    jump_y = real(reshape(AH(...
+        conc_factor(l_mat).*Y(:,:,ii)), N, N));
     f_jump(:,:,ii,1) = jump_x;
     f_jump(:,:,ii,2) = jump_y;
     
@@ -187,7 +187,7 @@ v = var(f_jump,1,3);
 %v = reshape(v,N,N); 
 
 % plot variance in x direction
-figure; imagesc(x,y,v(:,:,1));
+figure; imagesc(x,y,v(:,:,1)); title('variance in x direction');
 colorbar; axis xy image;
 h = xlabel('$x$');
 xlim([min(x) max(x)]);
@@ -248,7 +248,7 @@ figure;
 colormap gray
 imagesc(x,y,real(f_VBJS_wl1),dyn_range);
 axis xy image; colorbar;
-title('ADMM reconstruction (incorrect, not sure why)')
+title('ADMM reconstruction')
 xticks([]); 
 yticks([]);
 % %%
@@ -275,9 +275,9 @@ yticks([]);
 %% GLRT CD
 
 % make changed vector that records which measurements are "changed"
-% changed = false(1, num_meas);
-% changed((num_meas - num_chgd+1):end) = true;
-% 
-% change = GLRT2D(x, y, changed, f_meas, f_VBJS_wl1, 5);
-% 
-% figure; imagesc(change); colorbar;
+changed = false(1, num_meas);
+changed((num_meas - num_chgd+1):end) = true;
+
+change = GLRT2D(x, y, changed, f_meas, f_VBJS_wl1, 5, 1);
+
+figure; imagesc(change); colorbar;

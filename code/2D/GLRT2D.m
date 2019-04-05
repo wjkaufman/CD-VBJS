@@ -1,19 +1,24 @@
 function [change] = GLRT2D(x, y, changed, f_meas, f_VBJS, ...
-    nbhdSize)
+    nbhdSize, disp)
 % do GLRT based on hypothesis testing, assume Gaussian likelihoods
 % x and y are coordinates of pixel locations
 % f_meas is individually-reconstructed data (both ref and changed)
 % f_VBJS is reconstruction of data using VBJS (best estimate of scene)
+% nbhdSize specifies side length of neighborhood in pixels (so includes 
+%   nbhdSize^2 pixels in neighborhood)
+% disp: boolean, to plot things
 
 % get zero mean for GLRT assumption
 f_norm = f_meas - f_VBJS;
 
-% if printGraphs
-%     figure; plot(x, f_norm, '*'); title('f_norm vs. x');
-%     set(gcf, 'PaperPosition', [0 0 7 5]);
-%     set(gcf, 'PaperSize', [7 5]);
-%     print([prefix sprintf('f_norm-N_%d-K_%d-J_%d', N, K, J)], '-dpdf');
-% end
+if disp
+    figure; imagesc(real(f_norm(:,:,1)));
+        title('f_norm (first measurement)');
+        axis xy image; colorbar;
+    figure; imagesc(real(f_norm(:,:,size(f_norm, 3))));
+        title('f_norm (last measurement)');
+        axis xy image; colorbar;
+end
 
 % matrix that records changed regions
 change = zeros(length(x), length(y));
