@@ -41,7 +41,7 @@ for i = 1:(length(x)-nbhdSize + 1)
         % etc.
         
         change(i+floor(nbhdSize/2),j+floor(nbhdSize/2)) = ...
-            1-(numerator/denominator);
+            1-(numerator/denominator)^(1/J);
     end
 end
 

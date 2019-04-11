@@ -23,13 +23,18 @@ funct = 'hill';
 
 %% problem setup 
 
+os = 2^4; % oversampling ratio to determine Fourier coefficients
+
 % true image
 f = get_img(funct,N);
+f_os = get_img(funct,os*N);
 dyn_range = [min(min(f)),max(max(f))];
 std_noise = .55;%std(f(:))*1e-1;
 
 x = linspace(-1,1,N);
 y = linspace(-1,1,N);
+x_os = linspace(-1,1,os*N);
+y_os = linspace(-1,1,os*N);
 
 figure;
 colormap gray;
@@ -44,15 +49,21 @@ set(gca,'fontname','times','fontsize',16);
 
 % noise
 noise = std_noise*randn(N,N,num_meas);% + 1i*std_noise*randn(N,N,M);
+noise_os = std_noise*randn(os*N,os*N,num_meas);
 
 % changed data, goes at the front of the list of measurements
 F_CHGD = zeros(N,N,num_meas);
+F_CHGD_os = zeros(os*N,os*N,num_meas);
 % make consistent change for last num_chgd measurements
 u = -.75; du = .1;
 v = -.1; dv = .1;
 [X,Y] = meshgrid(x,y);
+[X_os,Y_os] = meshgrid(x_os,y_os);
 f_chgd = 5*(X >= u & X <= (u+du) & Y >= v & Y <= (v+dv)); % I think fine
+f_chgd_os = 5*(X_os >= u & X_os <= (u+du) & Y_os >= v & Y_os <= (v+dv)); % I think fine
 F_CHGD(:,:,(num_meas-num_chgd+1):num_meas) = repmat(f_chgd, 1, 1, num_chgd);
+F_CHGD_os(:,:,(num_meas-num_chgd+1):num_meas) = repmat(f_chgd_os, 1, 1, num_chgd);
+
 figure(20); colormap gray;
 imagesc(x,y,f_chgd+f,dyn_range);
 colorbar; axis xy image;
@@ -70,6 +81,8 @@ set(gca,'fontname','times','fontsize',16);
 % A is Fourier operator, AH is adjoint (= inverse)
 A =  @(u) reshape(fft2(reshape(u, N, N)) / sqrt(numel(u)), N^2, 1); 
 AH = @(u) reshape(ifft2(reshape(u, N, N)) *sqrt(numel(u)), N^2, 1);
+% separate operator for oversampling in spatial domain
+A_os =  @(u) reshape(fft2(reshape(u, os*N, os*N)) / sqrt(os^2*numel(u)), (os*N)^2, 1); 
 
 % PA operator 
 PA = PA_Operator_1D(N,order);
@@ -96,11 +109,21 @@ PAf_meas_vec = zeros(N^2,num_meas);
 figure; plot(x,f(:,N/2),'k--','linewidth',1.25); hold on;
 for ii = 1:num_meas
     sprintf('on iter %d', ii)
-    tmp = f+F_CHGD(:,:,ii); % add change to data
-    Y(:,:,ii) = reshape(A(tmp), N, N) + noise(:,:,ii);
+    tmp = f_os+F_CHGD_os(:,:,ii); % add change to data
+    Y_os = reshape(A_os(tmp), os*N, os*N) + noise_os(:,:,ii);
+    % downsample the Fourier coefficients to only get low-frequency
+    % info (what we'd normally get if we measured according to the 
+    % normal spatial gridpoints
+    Y(:,:,ii) = Y_os([1:floor(N/2), ceil(N*(os-.5)+1):os*N], ...
+        [1:floor(N/2), ceil(N*(os-.5)+1):os*N]);
     
-    f_star = real(reshape(AH(Y(:,:,ii)), N, N)); % do inverse Fourier sum
+    f_star = real(reshape(AH(Y(:,:,ii)), N, N)); % do inverse Fourier
     f_meas(:,:,ii) = f_star;
+    
+    % old code (TODO still need?)
+    PAf_meas(:,:,ii) = real(PA*f_star + f_star*PA);
+    PAf_meas_vec(:,ii) = col(PAf_meas(:,:,ii));
+    plot(x,f_meas(N/2,:,ii),'linewidth',1.25);
     
     % and sparse domain calculation
     jump_x = real(reshape(AH(...
@@ -109,11 +132,6 @@ for ii = 1:num_meas
         conc_factor(l_mat).*Y(:,:,ii)), N, N));
     f_jump(:,:,ii,1) = jump_x;
     f_jump(:,:,ii,2) = jump_y;
-    
-    % old code (TODO still need?)
-    PAf_meas(:,:,ii) = real(PA*f_star + f_star*PA);
-    PAf_meas_vec(:,ii) = col(PAf_meas(:,:,ii));
-    plot(x,f_meas(N/2,:,ii),'linewidth',1.25);
 end
 h = xlabel('$x$');
 xlim([min(x) max(x)]);
@@ -122,7 +140,7 @@ h = ylabel('$f(x,0)$');
 set(h,'interpreter','latex','fontsize',18);
 set(gca,'fontname','times','fontsize',16);
 
-% TODO 
+% TODO
 % filter jump functions by comparing sign across all
 % measurement vectors: if same sign -> keep value
 % if different sign -> set jump to 0

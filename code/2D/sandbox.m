@@ -8,4 +8,4 @@ figure; imagesc(f);
 Y = fft2(f)/sqrt(numel(f));
 
 figure; imagesc(real(Y));
-figure; plot(real(Y(:,1)));
+figure; plot(real(Y(:,1))); colorbar;
