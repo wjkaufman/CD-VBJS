@@ -1,15 +1,20 @@
-%% calculate ROC curve
-% Will Kaufman 2018
+%% create ROC curve
+% Will Kaufman 2019
 
 % define parameters of run
 
-prefix = '../graphics/undet_01_1-';
+prefix = '../../graphics/undet_01_1-';
 
-N = 100;
-K = 40;
-J = 10;
-Jprime = 5;
-noise = 1e-3;
+N = 128; % number of spatial points to reconstruct
+K = N; % number of Fourier coefficients observed (normally K = N)
+J = 5; % total number of measurements made on scene
+Jprime = 3; % total number of rereference measurements (no change)
+
+noise = 1e-3; % TODO change to SNR
+
+% TODO modify the existing code below to work for 2D
+% I'll need to refactor the code to easily generate/oversample spatial
+%   domain, then find Fourier coefficients, etc. etc.
 
 x0 = 1;
 a = 1/2;
@@ -17,12 +22,6 @@ ref_func = @(k) toy_func(x0, a, k);
 x1 = -.25;
 b = 1/4;
 chg_func = @(k) toy_func(x1, b, k);
-
-% create row selector matrix (identity to keep all Fourier coefficients)
-M = eye(K+1);
-M(1:5,:) = 0;
-% M = diag(rand(1,K+1) < .8);
-% can also block out all but a few k values (annulus type thing)
 
 [x, SNR, changed, ~] = make_data(ref_func, chg_func, N, K, J, Jprime, ...
         noise, M, prefix, true);
