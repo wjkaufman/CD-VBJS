@@ -1,4 +1,4 @@
-function [change] = GLRT2D(x, y, changed, f_meas, f_VBJS, ...
+function [change] = GLRT2D(x, y, isChanged, f_meas, f_VBJS, ...
     nbhdSize, disp)
 % do GLRT based on hypothesis testing, assume Gaussian likelihoods
 % x and y are coordinates of spatial gridpoint locations
@@ -23,18 +23,18 @@ end
 % matrix that records changed regions
 change = zeros(length(x), length(y));
 
-J = length(changed); % total number of measurements made
-Jp = sum(~changed); % total number of reference measurements
+J = length(isChanged); % total number of measurements made
+Jp = sum(~isChanged); % total number of reference measurements
 
 % TODO: implement using blockproc instead?
 for i = 1:(length(x)-nbhdSize + 1)
     for j = 1:(length(y)-nbhdSize + 1)
         indX = i:(i+nbhdSize - 1); indY = j:(j+nbhdSize - 1);
 
-        numerator = abs(1/Jp*sum(f_norm(indX, indY,~changed).^2,'all'))^Jp * ...
-                    abs(1/(J-Jp)*sum(f_norm(indX, indY, changed).^2,'all'))^(J-Jp);
-        denominator = abs(1/J*(sum(f_norm(indX,indY,~changed).^2,'all') + ... % ref images
-                               sum(f_norm(indX,indY, changed).^2,'all')))^J; % changed images
+        numerator = abs(1/Jp*sum(f_norm(indX, indY,~isChanged).^2,'all'))^Jp * ...
+                    abs(1/(J-Jp)*sum(f_norm(indX, indY, isChanged).^2,'all'))^(J-Jp);
+        denominator = abs(1/J*(sum(f_norm(indX,indY,~isChanged).^2,'all') + ... % ref images
+                               sum(f_norm(indX,indY, isChanged).^2,'all')))^J; % changed images
         
         % TODO: think about different hypothesis for multiple changed
         % images: see if all changed images are same, or if day1 ? day2

@@ -1,11 +1,21 @@
 function [x, y, f, Y, SNR, ...
-    f_jump, f_meas, f_VBJS_wl1] = make_data(N, J, Jprime, funct, order, os, std_noise, disp)
+    f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, Jprime, funct, order, os, std_noise, disp)
 % returns noisy data with changes, and optionally prints graphs to files
 %
 % funct: string that determines function type
 % os: oversampling ratio to determine Fourier coefficients
 % std_noise: standard deviation of noise in frequency domain
 % disp: boolean (to display plots)
+%
+% outputs
+% x/y: spatial gridpoints on which measurements are made
+% f: NxN true image of underlying scene
+% Y: NxNxJ Fourier coefficients
+% SNR: signal to noise ratio (in db)
+% f_jump: NxNxJx2 approximation to jump function, both in x- and y-dir
+% f_meas: individual reconstructions using inverse Fourier transform
+% f_VBJS_wl1: VBJS reconstruction using l1 regularization
+% changeRegion: NxN logical for where the change actually was
 
 % true image
 f = get_img(funct,N);
@@ -41,6 +51,8 @@ F_CHGD_os = zeros(os*N,os*N,J);
 u = -.75; du = .1;
 v = -.1; dv = .1;
 [X,Y] = meshgrid(x,y);
+% define where the change region is
+changeRegion = (X >= u & X <= (u+du) & Y >= v & Y <= (v+dv));
 [X_os,Y_os] = meshgrid(x_os,y_os);
 f_chgd = 5*(X >= u & X <= (u+du) & Y >= v & Y <= (v+dv)); % I think fine
 f_chgd_os = 5*(X_os >= u & X_os <= (u+du) & Y_os >= v & Y_os <= (v+dv)); % I think fine

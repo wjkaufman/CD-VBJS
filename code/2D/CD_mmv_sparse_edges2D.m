@@ -26,8 +26,8 @@ std_noise = 0.55;
 
 %% problem setup 
 
-[x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1] = make_data(N, J, Jprime, funct, ...
-    order, os, std_noise, false);
+[x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...
+    Jprime, funct, order, os, std_noise, false);
 
 
 %% GLRT CD

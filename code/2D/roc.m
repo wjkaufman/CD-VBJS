@@ -1,31 +1,60 @@
 %% create ROC curve
 % Will Kaufman 2019
 
-% define parameters of run
+%% define parameters of run
 
-prefix = '../../graphics/undet_01_1-';
+N = 128;
+J = 5;
+Jprime = 3;
+isChanged = false(1, J); % 1xJ vector that indicates whether measurement
+    % is of a "changed" scene
+isChanged((Jprime+1):end) = true;
 
-N = 128; % number of spatial points to reconstruct
-K = N; % number of Fourier coefficients observed (normally K = N)
-J = 5; % total number of measurements made on scene
-Jprime = 3; % total number of rereference measurements (no change)
+eps = .1; 
+lam = .25; 
+order = 2;
+disp = false;
 
-noise = 1e-3; % TODO change to SNR
+% ROC curve generation
+iter = 100; % number of iterations to perform for the ROC curve
+numDetect = 5; % number of pixels in changed region to sample
+numFA = 5; % number of pixels in unchanged region to sample
+T = 100; % number of threshold values to evaluate at (points along curve)
+thresh = repmat(linspace(0, 1, T), N, 1);
 
-% TODO modify the existing code below to work for 2D
-% I'll need to refactor the code to easily generate/oversample spatial
-%   domain, then find Fourier coefficients, etc. etc.
+funct = 'hill';
 
-x0 = 1;
-a = 1/2;
-ref_func = @(k) toy_func(x0, a, k);
-x1 = -.25;
-b = 1/4;
-chg_func = @(k) toy_func(x1, b, k);
+os = 2^4; % spatial oversampling ratio 
+        %(will use os^2 spatial values to inform every frequency value)
+std_noise = 0.55;
 
-[x, SNR, changed, ~] = make_data(ref_func, chg_func, N, K, J, Jprime, ...
-        noise, M, prefix, true);
-xChanged = abs(x) <= b; % logical, is there change? Depends on toy function
+%% problem setup 
+
+[x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...
+    Jprime, funct, order, os, std_noise, disp);
+
+
+%% GLRT CD
+
+change = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, disp);
+
+%figure; imagesc(change); colorbar;
+
+%%%%%
+
+% assume it's piecewise constant, so TV is sparse
+diffMat = -1 * eye(N);
+diffMat((N+1):N+1:end) = 1;
+diffMat(end,:) = zeros(1,N);
+L = diffMat;
+
+% ROC stuff
+% want to see how varying threshold T impacts PD and PFA
+
+pd = zeros(T, 1);
+pfa = zeros(T, 1);
+
+cumChanged = zeros(N, T);
 
 % define where actual changes and actual no changes occured (try multiple)
 ac1 = false(N, T);
@@ -39,41 +68,37 @@ ac2(abs(x) > .23 & abs(x) < .25, :) = true;
 anc2 = false(N,T);
 anc2(abs(x) > .25 & abs(x) < .3, :) = true;
 
-% assume it's piecewise constant, so TV is sparse
-diffMat = -1 * eye(N);
-diffMat((N+1):N+1:end) = 1;
-diffMat(end,:) = zeros(1,N);
-L = diffMat;
-
-% ROC stuff
-% want to see how varying threshold T impacts PD and PFA
-iter = 100;
-T = 200; % number of threshold values to evaluate at
-thresh = repmat(linspace(0, 1, T), N, 1);
-
-pd1 = zeros(T, 1);
-pfa1 = zeros(T, 1);
-pd2 = zeros(T, 1);
-pfa2 = zeros(T, 1);
-cumChanged = zeros(N, T);
-
 disp(['Signal to noise ratio is ' num2str(SNR)]);
 
 for i = 1:iter
     disp(['iteration ' num2str(i)]);
-    if i == 1
-        printGraphs = true;
-    else
-        printGraphs = false;
-    end
-%     M = diag(rand(1,K+1) < .8); % randomly do it every time
-    [~, ~, ~, Y] = make_data(ref_func, chg_func, N, K, J, Jprime, ...
-        noise, M, prefix, false);
     
-    [Ghat] = vbjs_reconstruct(N, K, J, Jprime, x, Y, L, prefix, printGraphs);
+    % randomly select pixels for true change and no change (false alarm)
+    ac = randsample(find(changeRegion), numDetect);
+    anc = randsample(find(~changeRegion), numFA);
+    
+    if i == 1
+        disp = true;
+    else
+        disp = false;
+    end
+    
+    [x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...
+    Jprime, funct, order, os, std_noise, disp);
+    % below is what I had before for the 1D case
+%     [~, ~, ~, Y] = make_data(ref_func, chg_func, N, K, J, Jprime, ...
+%         noise, M, prefix, false);
+    
+    % IDT I need the following
+%     [Ghat] = vbjs_reconstruct(N, K, J, Jprime, x, Y, L, prefix, disp);
 
-    [change] = glrt(N, K, J, Jprime, x, changed, Y, Ghat, 3, prefix, printGraphs);
-
+    change = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, disp);
+    %
+    % TODO as of 2019-04-17 16:26:10
+    % Keep on working here, actually sample the change/no change regions
+    % and store the relevant values...
+    % Then make pretty plots!
+    % also try to remember what cumChanged is (I don't remember...)
     isChanged = repmat(change', 1, T);  % N-by-T matrix
     isChanged = isChanged > thresh;
     cumChanged = cumChanged + isChanged;
