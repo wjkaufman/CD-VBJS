@@ -1,7 +1,7 @@
 function [change] = GLRT2D(x, y, changed, f_meas, f_VBJS, ...
     nbhdSize, disp)
 % do GLRT based on hypothesis testing, assume Gaussian likelihoods
-% x and y are coordinates of pixel locations
+% x and y are coordinates of spatial gridpoint locations
 % f_meas is individually-reconstructed data (both ref and changed)
 % f_VBJS is reconstruction of data using VBJS (best estimate of scene)
 % nbhdSize specifies side length of neighborhood in pixels (so includes 
@@ -13,10 +13,10 @@ f_norm = f_meas - f_VBJS;
 
 if disp
     figure; imagesc(real(f_norm(:,:,1)));
-        title('f_norm (first measurement)');
+        title('f_{norm} (first measurement)');
         axis xy image; colorbar;
     figure; imagesc(real(f_norm(:,:,size(f_norm, 3))));
-        title('f_norm (last measurement)');
+        title('f_{norm} (last measurement)');
         axis xy image; colorbar;
 end
 
