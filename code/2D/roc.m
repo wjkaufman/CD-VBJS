@@ -1,6 +1,10 @@
 %% create ROC curve
 % Will Kaufman 2019
 
+clear all;
+close all;
+addpath('helper_functs');
+
 %% define parameters of run
 
 N = 128;
@@ -13,30 +17,30 @@ isChanged((Jprime+1):end) = true;
 eps = .1; 
 lam = .25; 
 order = 2;
-disp = false;
+willDisp = false;
 
 % ROC curve generation
-iter = 8; % number of iterations to perform for the ROC curve
-numDetect = 5; % number of pixels in changed region to sample
-numFA = 5; % number of pixels in unchanged region to sample
-T = 100; % number of threshold values to evaluate at (points along curve)
+iter = 2^3; % number of iterations to perform for the ROC curve
+numDetect = 8; % number of pixels in changed region to sample
+numFA = 8; % number of pixels in unchanged region to sample
+T = 64; % number of threshold values to evaluate at (points along curve)
 thresh = reshape(linspace(0, 1, T), [1,1,T]);
 thresh = repmat(thresh, N, N, 1);
 funct = 'hill';
 
 os = 2^4; % spatial oversampling ratio 
         %(will use os^2 spatial values to inform every frequency value)
-std_noise = 0.5;
+std_noise = 4;
 
 %% problem setup
 
 [x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...
-    Jprime, funct, order, os, std_noise, disp);
+    Jprime, funct, order, os, std_noise, willDisp);
 
 
 %% GLRT CD
 
-change = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, disp);
+change = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, willDisp);
 
 %figure; imagesc(change); colorbar;
 
@@ -51,8 +55,10 @@ L = diffMat;
 % ROC stuff
 % want to see how varying threshold T impacts PD and PFA
 
-pd = zeros(T, 1);
-pfa = zeros(T, 1);
+pd1 = zeros(T, 1);
+pd2 = zeros(T, 1);
+pfa1 = zeros(T, 1);
+pfa2 = zeros(T, 1);
 
 cumChanged = zeros(N, N, T); % (i,j,t) = fraction of time the pixel (i,j)
             % is marked as a change with threshold t
@@ -80,41 +86,56 @@ for i = 1:iter
     anc = randsample(find(~changeRegion), numFA);
     
     if i == 1
-        disp = true;
+        willDisp = true;
     else
-        disp = false;
+        willDisp = false;
     end
     
     [x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...
-    Jprime, funct, order, os, std_noise, disp);
+    Jprime, funct, order, os, std_noise, willDisp);
     % below is what I had before for the 1D case
 %     [~, ~, ~, Y] = make_data(ref_func, chg_func, N, K, J, Jprime, ...
 %         noise, M, prefix, false);
     
     % IDT I need the following
-%     [Ghat] = vbjs_reconstruct(N, K, J, Jprime, x, Y, L, prefix, disp);
+%     [Ghat] = vbjs_reconstruct(N, K, J, Jprime, x, Y, L, prefix, willDisp);
 
-    change = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, disp);
+    change = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, willDisp);
     
-    isChanged = repmat(change, 1, 1, T);  % NxNxT matrix
-    isChanged = isChanged > thresh;
-    cumChanged = cumChanged + isChanged;
+    % isObsChanged is NxNxT logical matrix that records if pixel (i,j) is
+    % measured as a change with threshold t
+    isObsChanged = repmat(change, 1, 1, T);  % NxNxT matrix
+    isObsChanged = isObsChanged > thresh;
+    cumChanged = cumChanged + isObsChanged;
     % check if estimated changes match with true changes
     % and see how often estimated changes match with no true changes
-    pd = pd + reshape(sum(isChanged(mod(ac-1, N)+1, ceil(ac/N), :), ...
-                          [1,2]) / numel(ac),...
-                      T, 1);
-    pfa = pfa + reshape(sum(isChanged(mod(anc-1, N)+1, ceil(anc/N), :), ...
-                            [1,2]) / numel(anc), ...
-                        T,1);
+    %
+    % TODO as of 2019-04-22 15:41
+    % figure out how to get pd, pfa correct (currently looks very weird...)
+    %
+    pd1 = pd1 + reshape(sum(isObsChanged(ac + N^2 * (0:(T-1))), 1) / ...
+                           (numel(ac)), T, 1);
+    pd2 = pd2 + reshape(sum(~isObsChanged(anc + N^2 * (0:(T-1))), 1) / ...
+                            (numel(anc)), T, 1);
+    pfa1 = pfa1 + reshape(sum(isObsChanged(anc + N^2 * (0:(T-1))), 1) / ...
+                            (numel(anc)), T,1);
+    pfa2 = pfa2 + reshape(sum(~isObsChanged(ac + N^2 * (0:(T-1))), 1) / ...
+                            (numel(ac)), T,1);
 end
 
 cumChanged = cumChanged / iter;
-pd = pd / iter; pfa = pfa / iter;
+pd1 = pd1 / iter; pd2 = pd2 / iter;
+pfa1 = pfa1 / iter; pfa2 = pfa2 / iter; 
 
 % then plot stuff
-figure; plot(pfa, pd, '-*', [0 1], [0 1], 'k-.');
-title('Receiver operator curve');
+figure; plot(pfa1, pd1, '-*', [0 1], [0 1], 'k-.');
+title('Receiver operator curve (detect = change)');
+xlabel('PFA'); ylabel('PD');
+set(gcf, 'PaperPosition', [0 0 7 5]);
+set(gcf, 'PaperSize', [7 5]);
+
+figure; plot(pfa2, pd2, '-*', [0 1], [0 1], 'k-.');
+title('Receiver operator curve (detect = no change)');
 xlabel('PFA'); ylabel('PD');
 set(gcf, 'PaperPosition', [0 0 7 5]);
 set(gcf, 'PaperSize', [7 5]);

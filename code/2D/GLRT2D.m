@@ -1,5 +1,5 @@
 function [change] = GLRT2D(x, y, isChanged, f_meas, f_VBJS, ...
-    nbhdSize, disp)
+    nbhdSize, willDisp)
 % do GLRT based on hypothesis testing, assume Gaussian likelihoods
 % x and y are coordinates of spatial gridpoint locations
 % f_meas is individually-reconstructed data (both ref and changed)
@@ -7,11 +7,14 @@ function [change] = GLRT2D(x, y, isChanged, f_meas, f_VBJS, ...
 % nbhdSize specifies side length of neighborhood in pixels (so includes 
 %   nbhdSize^2 pixels in neighborhood)
 % disp: boolean, to plot things
+%
+% results
+% change: NxN matrix that shows change detection
 
 % get zero mean for GLRT assumption
 f_norm = f_meas - f_VBJS;
 
-if disp
+if willDisp
     figure; imagesc(real(f_norm(:,:,1)));
         title('f_{norm} (first measurement)');
         axis xy image; colorbar;
@@ -45,14 +48,9 @@ for i = 1:(length(x)-nbhdSize + 1)
     end
 end
 
-% if printGraphs
-%     figure; plot(x, f_meas); hold on; title('Y vs. x, with CD');
-%     plot(x, change, 'k-', ...
-%         'LineWidth', 4);
-%     hold off;
-%     set(gcf, 'PaperPosition', [0 0 7 5]);
-%     set(gcf, 'PaperSize', [7 5]);
-%     print([prefix sprintf('Y_CD-N_%d-K_%d-J_%d', N, K, J)], '-dpdf');
-% end
+if willDisp
+    figure; imagesc(change); colorbar;
+    title('Change statistic \gamma');
+end
 
 end

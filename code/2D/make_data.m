@@ -112,7 +112,7 @@ for ii = 1:J
     tmp = f_os+F_CHGD_os(:,:,ii); % add change to data
     Y_os = reshape(A_os(tmp), os*N, os*N) + noise_os(:,:,ii);
     % TODO how to compute SNR??
-    SNR(ii) = 0;% snr(norm(Y_os-noise_os(:,:,ii)), noise_os(:,:,ii));
+    SNR(ii) = snr(Y_os-noise_os(:,:,ii), noise_os(:,:,ii));
     % downsample the Fourier coefficients to only get low-frequency
     % info (what we'd normally get if we measured according to the 
     % normal spatial gridpoints
@@ -137,6 +137,9 @@ for ii = 1:J
     f_jump(:,:,ii,1) = jump_x;
     f_jump(:,:,ii,2) = jump_y;
 end
+
+SNR = mean(SNR, 'all');
+
 if disp
     h = xlabel('$x$');
     xlim([min(x) max(x)]);
