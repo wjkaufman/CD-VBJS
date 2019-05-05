@@ -29,22 +29,29 @@ change = zeros(length(x), length(y));
 J = length(isChanged); % total number of measurements made
 Jp = sum(~isChanged); % total number of reference measurements
 
-% TODO: implement using blockproc instead?
+N = nbhdSize^2;
+
 for i = 1:(length(x)-nbhdSize + 1)
     for j = 1:(length(y)-nbhdSize + 1)
         indX = i:(i+nbhdSize - 1); indY = j:(j+nbhdSize - 1);
-
-        numerator = abs(1/Jp*sum(f_norm(indX, indY,~isChanged).^2,'all'))^Jp * ...
-                    abs(1/(J-Jp)*sum(f_norm(indX, indY, isChanged).^2,'all'))^(J-Jp);
-        denominator = abs(1/J*(sum(f_norm(indX,indY,~isChanged).^2,'all') + ... % ref images
-                               sum(f_norm(indX,indY, isChanged).^2,'all')))^J; % changed images
         
-        % TODO: think about different hypothesis for multiple changed
-        % images: see if all changed images are same, or if day1 ? day2
-        % etc.
+        fnnc = f_norm(indX, indY,~isChanged); %fn = fnorm, nc = no change
+        fnc = f_norm(indX, indY, isChanged); % c = change
+        fnAll = f_norm(indX, indY, :); % all values for neighborhood
+        
+        numerator = abs(det( cov(reshape(fnnc, 1, numel(fnnc)), 1) ...
+                        ))^(Jp/2) * ...
+                    abs(det( cov(reshape(fnc, 1, numel(fnc)), 1) ...
+                        ))^((J-Jp)/2);
+        denominator = abs(det( cov(reshape(fnAll, 1, numel(fnAll)), 1) ...
+                        ))^(J/2);
         
         change(i+floor(nbhdSize/2),j+floor(nbhdSize/2)) = ...
-            1-(numerator/denominator)^(1/J);
+            1-(numerator/denominator);
+        
+        if change(i+floor(nbhdSize/2),j+floor(nbhdSize/2)) < -10
+            disp 'help here...'
+        end
     end
 end
 
