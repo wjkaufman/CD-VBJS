@@ -20,7 +20,7 @@ order = 2;
 willDisp = false;
 
 % ROC curve generation
-iter = 2^3; % number of iterations to perform for the ROC curve
+iter = 2^2; % number of iterations to perform for the ROC curve
 numDetect = 8; % number of pixels in changed region to sample
 numFA = 8; % number of pixels in unchanged region to sample
 T = 64; % number of threshold values to evaluate at (points along curve)
@@ -30,7 +30,7 @@ funct = 'hill';
 
 os = 2^4; % spatial oversampling ratio 
         %(will use os^2 spatial values to inform every frequency value)
-std_noise = 4;
+std_noise = 2;
 
 %% problem setup
 
