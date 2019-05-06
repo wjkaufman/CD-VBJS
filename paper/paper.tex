@@ -1,0 +1,180 @@
+% !TEX output_directory=output
+\documentclass{article}
+
+\usepackage{kaufman}
+
+\graphicspath{{graphics/}}
+
+%
+% Define commands and such
+%
+
+
+\title{Improving change detection algorithms with variance based joint sparsity recovery}
+\author{Will Kaufman%
+    %\thanks{Research Professor Gelb}
+}
+
+\begin{document}
+\maketitle
+
+
+% \begin{abstract}
+% This paper explored a new change detection (CD) algorithm that used variance based joint sparsity (VBJS) in conjunction with a generalized likelihood ratio test to improve robustness against noisy data and intentional misinformation. Several different cases using simulated data, including varying levels of noise and loss of original data, demonstrated good performance of the improved algorithm. However, the proposed CD algorithm did not perform well at the edges of the changed region, and also failed to accurately detect changes overall when the original Fourier data was lost randomly through the frequency domain.
+% \end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+
+In many imaging applications, one goal of analysis is to detect changes in the image data over time. If a ``reference'' image (before a possible change) and a ``changed'' image (after a possible change) are taken of a scene, it is necessary to discriminate between random noise from image collection and genuine changes in the scene%
+% (see figure~\ref{fig:difference_game} as an example)
+. Many change detection (CD) algorithms have been developed using a variety of techniques. One common CD technique uses hypothesis testing, in which the ratio of likelihoods under the null (no change) and alternative hypothesis (change) is taken, as explained in~\cite{novak_2005}. With SAR data, the phase differences between reference and changed images can be used to detect subtle changes in the scene (coherent CD), and the intensity changes can also be used for larger changes (non-coherent CD)~\cite{Ash_2014}.
+
+The comparison of reference and changed images using likelihood ratio testing (LRT) can be extended to multiple reference images, changed images, or both (called multi-pass CD). However, The likelihood ratio tests assumes that the measurement vectors are drawn from the same distributions with no noise or misinformation. Furthermore, the CD algorithms do not take advantage of the joint sparsity of the set of images. Work done in \cite{gelb_2018} uses variance based joint sparsity (VBJS) to recover more information from multiple measurement vectors (MMVs), which could be applied to CD algorithms with multiple images. In this paper, multi-pass CD algorithms using VBJS methods will be investigated to improve accuracy of results and robustness against intentional misrepresentation of the underlying scene.
+
+\section{Problem statement}\label{sec:problem}
+
+For ease of presentation, only 1-dimensional, non-coherent images of the scene are described. The technique can be extended to two-dimensional images (as is considered in the numerical experiments presented) as well as coherent data. Let $f: [-1,1] \to \R$ be a piecewise smooth function representing the scene of interest. The Fourier coefficients $\{\hat{f}_k\}_{k=-K}^{K}$ of $f$ are observed for a single measurement vector $\hat{\mathbf{f}}_j = [\hat{f_{0,j}}, \hat{f_{1,j}}, \dots]^\top$, and a total of $J$ measurement vectors are observed of the scene. The first $J'$ vectors are ``reference images'' in which the scene has not changed, and the last $J-J'$ images are ``changed images'' in which the scene has changed.
+The matrix $\hat{F} \in \C^{K \times J}$ is then all the data gathered from the scene, composed of the column vectors $\hat{\mathbf{f}}_j$.
+
+From $\hat{F}$, we wish to determine which spatial locations of a scene have changed from the reference state to the changed state. We can do so by finding a change statistic $\gamma: [-1,1] \to \{0, 1\}$ where $\gamma=0$ if there was no change and $\gamma = 1$ if there was a change.
+
+%See figure~\ref{fig:yhat} for a plot of a toy function. $J=10$ images were studied, where the first $J'=5$ images were reference images consisting of a top hat function. The last $5$ images were changed images, where the middle of the top hat was depressed slightly.
+
+%\begin{figure}[H]
+%    \centering
+%    \includegraphics[width=0.7\textwidth]{noise_1e-3-yhat-N_100-K_40-J_10.pdf}
+%    \caption{A toy function used to evaluate the CD algorithm.}
+%    \label{fig:yhat}
+%\end{figure}
+
+%A perfect CD algorithm would identify the interval $[-.25, .25]$ in figure~\ref{fig:yhat} as changed ($\gamma=1$), and the rest of the domain as unchanged ($\gamma=0$).
+
+\section{Methods}
+
+The two major components of the proposed algorithm studied were variance based joint sparsity recovery (VBJS) and a generalized likelihood-ratio test (GLRT) for change detection. The two techniques are discussed separately below, then the proposed algorithm that uses both methods is presented.
+
+% TODO write a short motivation for _why_ we're doing this
+% why use VBJS? (good for MMV, multi-pass)
+% conc factors (comp. efficient)
+% hypothesis testing (CD)
+
+\subsection{Variance based joint sparsity}\label{subsec:vbjs}
+
+As presented in~\cite{gelb_2018}, VBJS uses the information contained in the joints sparsity of multiple measurement vectors (MMVs) to reconstruct an approximation $\hat{g}$ of the original signal $f$. The VBJS algorithm is presented below.
+
+\begin{enumerate}
+    \item Recover individual reconstructions of the scene $Y \in \C^{N\times J}$, containing $J$ reconstructions of the scene with $N$ spatial values.
+    \item Using the sparsifying transform $\mathcal{L}$, determine the reconstruction of the $J$ measurements in the sparse domain $P \in \R^{N\times J}$. % TODO fill in how P is calculated (P = L(Y)??)
+    \item Calculate the sample variance of $P$ across the $J$ measurements%
+    % TODO for each spatial value??
+    , and calculate weights according to
+    \begin{equation}
+        w_i = \begin{cases}
+            C(1-\frac{v_i}{\max_i v_i}) & \text{if $i$ corresponds to an edge} \\
+            \frac{1}{C}(1-\frac{v_i}{\max_i v_i}) & \text{otherwise}
+    \end{cases}
+    \end{equation}
+    where $C$ is the average $l_1$ norm across all measurements of the normalized sparse measurements (see~\cite{gelb_2018} for a more detailed explanation).
+    \item Solve weighted $l_1$ regularization problem to recover $\hat{g}$.
+\end{enumerate}
+
+%An example of using VBJS to reconstruct a vector from MMVs is presented in figure~\ref{fig:vbjs_example}.
+%
+%\begin{figure}[H]
+%    \centering
+%    \begin{subfigure}{.6\linewidth}
+%        \centering
+%    \includegraphics[width=\linewidth]{vbjs01-yhat-N_101-K_50-J_5.pdf}
+%    \caption{Individual recoveries from Fourier data.}
+%    \end{subfigure}
+%    \begin{subfigure}{0.5\linewidth}
+%        \centering
+%    \includegraphics[width=\linewidth]{vbjs01-P-N_101-K_50-J_5.pdf}
+%    \caption{MMVs in the sparse domain $\mathcal{L} = TV$ for the piecewise-constant function.}
+%    \end{subfigure}%
+%    \begin{subfigure}{0.5\linewidth}
+%        \centering
+%    \includegraphics[width=\linewidth]{vbjs01-Ghat-N_101-K_50-J_5.pdf}
+%    \subcaption{Solution $\hat{g}$ to weighted $l_1$ regularization.}
+%    \end{subfigure}
+%    \caption{Example VBJS reconstruction using $J=5$ MMVs.}
+%    \label{fig:vbjs_example}
+%\end{figure}
+
+\subsection{Concentration factors and jump function approximations}
+
+Because the original signal $f$ is assumed to be piecewise continuous, and is observed indirectly by way of Fourier coefficients $\hat{f_k}$, the sparse domain reconstruction $P$ (steps 1 and 2 of the VBJS algorithm outlined in~\ref{subsec:vbjs}) can be calculated using concentration factors to find the jump function approximation.
+
+Many choices of concentration factors exist, but for this paper the polynomial factor from~\cite{Gelb2011} is used
+
+\begin{equation}\label{eq:conc_factor}
+    \sigma_\text{poly}(k) = i\pi pk^p
+\end{equation}
+\comment{Change concentration factor to bandpass filter? We talked about this during the fall, but wasn't sure if it was important to do or just an idea to try out.}
+
+
+The jump function approximation for the $j$th measurement can then be calculated using the concentration factor by
+\[
+p_j = \Re\{ \mathcal{F}^{-1}(\hat{\mathbf{f}}^\sigma_j) \}
+\]
+so that $p_i \in \R^{N \times 1}$ and $P = [p_1, \dots, p_j]$.
+
+Using concentration factors allows for more efficient computation of the jump function approximation compared with other optimization methods.
+
+\subsection{Generalized likelihood-ratio test}
+
+Existing CD algorithms use a variety of different techniques. The simplest technique is calculating a difference statistic between the reference and changed images. Regions with a large difference indicate a change, and regions of no or little difference indicate no change. The difference statistic is not robust, however, as it depends on the pixel intensities and magnitude of the change, as well as the choice of threshold value. The ratio-of-intensities statistic is slightly better than the difference statistic, but still suffers from a lack of robustness and sensitivity to choice of parameters.
+
+The hypothesis testing approach improves on both methods. Two hypotheses are considered: $H_0$, no change in some neighborhood $\mathcal{N}$ of the scene; and $H_1$, change in $\mathcal{N}$. Under these hypotheses, the probabilities of observing the data are calculated, and the ratio of \emph{probabilities} under the two hypotheses is calculated~\cite{novak_2005}.
+\begin{equation}
+    \text{LRT} = \frac{P(Y | H_0)}{P(Y | H_1)}
+\end{equation}
+
+By assuming the data are zero-mean Gaussian random variables, we can compute the generalized LRT (GLRT) from the covariance matrices under $H_0$ and $H_1$
+
+\begin{equation}\label{eq:glrt}
+    \text{GLRT}^{1/J}_{\mathcal{N}} = \frac{
+        \left|\frac{1}{J'} \sum_{j=1}^{J'} \sum_{i \in \mathcal{N}}
+                    Y_{ij}Y_{ij}^\dagger \right|^{J'} % ref scene
+        \left|\frac{1}{J-J'} \sum_{j=J'+1}^{J} \sum_{i \in \mathcal{N}}
+                    Y_{ij}Y_{ij}^\dagger \right|^{J-J'}}% changed scene
+        {\left|\frac{1}{J} \sum_{j=1}^J \sum_{i \in \mathcal{N}}
+                    Y_{ij}Y_{ij}^\dagger \right|^J} % null hypothesis
+\end{equation}
+
+Then construct the change statistic $\gamma_\mathcal{N}$ by
+\begin{equation}
+    \gamma = \left[ 1-\text{GLRT}^{1/N} \right] > \tau
+\end{equation}
+where $\tau$ is a threshold value.
+
+The generalized likelihood-ratio test is more robust than intensity difference or ratio statistics, because the relative intensity values does not affect the change statistic. In addition, the GLRT method can be extended to include coherent change detection, where the phase is assumed to be drawn from a circular Gaussian (see~\cite{Ash_2014}). Finally, the GLRT method can take into account MMVs, either multiple reference images or multiple changed images, to improve the algorithm's accuracy.
+
+\subsection{Improved GLRT with VBJS}
+
+Although the GLRT can include data from MMVs, it only does so when calculating the sample covariances in equation~\ref{eq:glrt}. Furthermore, this fails to take into account the information present in the joint sparsity of the MMVs, and does not prevent intentional misinformation from affecting the algorithm. To improve the current GLRT algorithm, the VBJS method is used to reconstruct the ``best'' reference image $\hat{g}$, which is then used to calculate a new set of vectors $G_\text{norm}$ to use in the GLRT. The steps of the procedure are given below.
+
+\begin{enumerate}
+    \item Reconstruct the ``best'' reference vector $\hat{g}$ using VBJS from the individual reconstructions $Y$.
+    \item Calculate the set of vectors $G_\text{norm} = Y - \hat{g}$. $G_\text{norm}$ captures random noise in reference images, or legitimate changes in changed images.
+    \item Perform regular CD on $G_\text{norm}$, where the $Y$ values in equation~\ref{eq:glrt} are replaced with the corresponding values in $G_\text{norm}$.
+\end{enumerate}
+
+\comment{The problem I'm having in the code is in step 1 with reconstructing $\hat{g}$. The ADMM function I have isn't close to approximating the original function. I tried using uniform weights for the l1 regularization but that didn't help. I'll send an email to Theresa and continue working on fixing it. }
+
+Calculating $G_\text{norm}$ satisfies the underlying assumption of the GLRT that the data are drawn from a \emph{zero-mean} distribution. However, this method relies on the assumption that the residual noise captured in $G_\text{norm}$ is normally distributed, which may not be the case given the non-linear optimization process implemented in VBJS.
+
+%\section{Results}
+% actually fill in when I get here
+
+
+%\section{Conclusion}
+
+\bibliography{biblio.bib}
+\bibliographystyle{ieeetr}
+
+\end{document}
