@@ -5,11 +5,6 @@
 
 \graphicspath{{graphics/}}
 
-%
-% Define commands and such
-%
-
-
 \title{Improving change detection algorithms with variance based joint sparsity recovery}
 \author{Will Kaufman%
     %\thanks{Research Professor Gelb}
@@ -67,8 +62,7 @@ The two major components of the proposed algorithm studied were variance based j
 As presented in~\cite{gelb_2018}, VBJS uses the information contained in the joints sparsity of multiple measurement vectors (MMVs) to reconstruct an approximation $\hat{g}$ of the original signal $f$. The VBJS algorithm is presented below.
 
 \begin{enumerate}
-    \item Recover individual reconstructions of the scene $Y \in \C^{N\times J}$, containing $J$ reconstructions of the scene with $N$ spatial values.
-    \item Using the sparsifying transform $\mathcal{L}$, determine the reconstruction of the $J$ measurements in the sparse domain $P \in \R^{N\times J}$. % TODO fill in how P is calculated (P = L(Y)??)
+    \item Recover individual reconstructions of the scene in a sparse domain $P \in \C^{N\times J}$, containing $J$ reconstructions of the scene with $N$ values for each reconstruction.
     \item Calculate the sample variance of $P$ across the $J$ measurements%
     % TODO for each spatial value??
     , and calculate weights according to
@@ -82,50 +76,26 @@ As presented in~\cite{gelb_2018}, VBJS uses the information contained in the joi
     \item Solve weighted $l_1$ regularization problem to recover $\hat{g}$.
 \end{enumerate}
 
-%An example of using VBJS to reconstruct a vector from MMVs is presented in figure~\ref{fig:vbjs_example}.
-%
-%\begin{figure}[H]
-%    \centering
-%    \begin{subfigure}{.6\linewidth}
-%        \centering
-%    \includegraphics[width=\linewidth]{vbjs01-yhat-N_101-K_50-J_5.pdf}
-%    \caption{Individual recoveries from Fourier data.}
-%    \end{subfigure}
-%    \begin{subfigure}{0.5\linewidth}
-%        \centering
-%    \includegraphics[width=\linewidth]{vbjs01-P-N_101-K_50-J_5.pdf}
-%    \caption{MMVs in the sparse domain $\mathcal{L} = TV$ for the piecewise-constant function.}
-%    \end{subfigure}%
-%    \begin{subfigure}{0.5\linewidth}
-%        \centering
-%    \includegraphics[width=\linewidth]{vbjs01-Ghat-N_101-K_50-J_5.pdf}
-%    \subcaption{Solution $\hat{g}$ to weighted $l_1$ regularization.}
-%    \end{subfigure}
-%    \caption{Example VBJS reconstruction using $J=5$ MMVs.}
-%    \label{fig:vbjs_example}
-%\end{figure}
-
 \subsection{Concentration factors and jump function approximations}
 
 Because the original signal $f$ is assumed to be piecewise continuous, and is observed indirectly by way of Fourier coefficients $\hat{f_k}$, the sparse domain reconstruction $P$ (steps 1 and 2 of the VBJS algorithm outlined in~\ref{subsec:vbjs}) can be calculated using concentration factors to find the jump function approximation.
 
-Many choices of concentration factors exist, but for this paper the polynomial factor from~\cite{Gelb2011} is used
-
+For this investigation the exponential concentration factor was used, where the factor was of the following form:
 \begin{equation}\label{eq:conc_factor}
-    \sigma_\text{poly}(k) = i\pi pk^p
+    TODO change this to exponential factor (and get changed in code)
+    %\sigma_\text{poly}(k) = i\pi pk^p
 \end{equation}
-\comment{Change concentration factor to bandpass filter? We talked about this during the fall, but wasn't sure if it was important to do or just an idea to try out.}
-
 
 The jump function approximation for the $j$th measurement can then be calculated using the concentration factor by
 \[
 p_j = \Re\{ \mathcal{F}^{-1}(\hat{\mathbf{f}}^\sigma_j) \}
 \]
-so that $p_i \in \R^{N \times 1}$ and $P = [p_1, \dots, p_j]$.
+so that % TODO define p_i, see how I did it in code (and how it's supposed to be done...)
+%$p_i \in \R^{N \times 1}$ and $P = [p_1, \dots, p_j]$.
 
 Using concentration factors allows for more efficient computation of the jump function approximation compared with other optimization methods.
 
-\subsection{Generalized likelihood-ratio test}
+\subsection{Generalized likelihood-ratio test (GLRT)}
 
 Existing CD algorithms use a variety of different techniques. The simplest technique is calculating a difference statistic between the reference and changed images. Regions with a large difference indicate a change, and regions of no or little difference indicate no change. The difference statistic is not robust, however, as it depends on the pixel intensities and magnitude of the change, as well as the choice of threshold value. The ratio-of-intensities statistic is slightly better than the difference statistic, but still suffers from a lack of robustness and sensitivity to choice of parameters.
 
@@ -154,27 +124,27 @@ where $\tau$ is a threshold value.
 
 The generalized likelihood-ratio test is more robust than intensity difference or ratio statistics, because the relative intensity values does not affect the change statistic. In addition, the GLRT method can be extended to include coherent change detection, where the phase is assumed to be drawn from a circular Gaussian (see~\cite{Ash_2014}). Finally, the GLRT method can take into account MMVs, either multiple reference images or multiple changed images, to improve the algorithm's accuracy.
 
-\subsection{Improved GLRT with VBJS}
+\subsection{Improving GLRT with VBJS}
 
-Although the GLRT can include data from MMVs, it only does so when calculating the sample covariances in equation~\ref{eq:glrt}. Furthermore, this fails to take into account the information present in the joint sparsity of the MMVs, and does not prevent intentional misinformation from affecting the algorithm. To improve the current GLRT algorithm, the VBJS method is used to reconstruct the ``best'' reference image $\hat{g}$, which is then used to calculate a new set of vectors $G_\text{norm}$ to use in the GLRT. The steps of the procedure are given below.
+Although the GLRT can include data from MMVs, it only does so when calculating the sample covariances in (\ref{eq:glrt}). Furthermore, this fails to take into account the information present in the joint sparsity of the MMVs, and does not prevent intentional misinformation from affecting the algorithm. To improve the current GLRT algorithm, the VBJS method is used to reconstruct the ``best'' reference image $\hat{g}$, which is then used to calculate a new set of vectors $G_\text{norm}$ to use in the GLRT. The steps of the procedure are given below.
 
 \begin{enumerate}
     \item Reconstruct the ``best'' reference vector $\hat{g}$ using VBJS from the individual reconstructions $Y$.
     \item Calculate the set of vectors $G_\text{norm} = Y - \hat{g}$. $G_\text{norm}$ captures random noise in reference images, or legitimate changes in changed images.
-    \item Perform regular CD on $G_\text{norm}$, where the $Y$ values in equation~\ref{eq:glrt} are replaced with the corresponding values in $G_\text{norm}$.
+    \item Perform regular CD on $G_\text{norm}$, where the $Y$ values in (\ref{eq:glrt}) are replaced with the corresponding values in $G_\text{norm}$.
 \end{enumerate}
-
-\comment{The problem I'm having in the code is in step 1 with reconstructing $\hat{g}$. The ADMM function I have isn't close to approximating the original function. I tried using uniform weights for the l1 regularization but that didn't help. I'll send an email to Theresa and continue working on fixing it. }
 
 Calculating $G_\text{norm}$ satisfies the underlying assumption of the GLRT that the data are drawn from a \emph{zero-mean} distribution. However, this method relies on the assumption that the residual noise captured in $G_\text{norm}$ is normally distributed, which may not be the case given the non-linear optimization process implemented in VBJS.
 
-%\section{Results}
-% actually fill in when I get here
+\section{Results}
 
+% TODO actually fill in when I get here
 
-%\section{Conclusion}
+\section{Conclusion}
 
-\bibliography{biblio.bib}
+% TODO fill in once I write up results...
+
+\bibliography{bib.bib}
 \bibliographystyle{ieeetr}
 
 \end{document}
