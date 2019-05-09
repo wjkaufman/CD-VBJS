@@ -15,13 +15,14 @@ function [sigma] = conc_factor(k)
 % sigma = 2 * sigma / sqrt(numel(k)); % fix scaling issues
 
 % exponential factor
-order = 2;
+order = 2^1;
 maxk = max(abs(k), [], 'all');
 eta   = abs(k) ./ maxk; % changed from abs(k) ./ ...
 fun   = @(x) exp(1./(order*x.*(x-1)));
 C     = pi/integral(fun,1/maxk,1-1/maxk);
 sigma   = C*eta.*exp(1./(order*eta.*(eta-1)));
 sigma(abs(eta-1)<1e-8)=0;
+sigma = 1i .* sign(k) .* sigma; % my own twist, trying to replicate good results from poly factor
 
 % trig factor
 % sigma = sin(pi * k) / sinint(pi);
