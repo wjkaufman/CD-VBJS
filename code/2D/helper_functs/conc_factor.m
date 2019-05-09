@@ -15,10 +15,11 @@ function [sigma] = conc_factor(k)
 % sigma = 2 * sigma / sqrt(numel(k)); % fix scaling issues
 
 % exponential factor
-order = 2; % not sure what importance this has...
-eta   = abs(k)/max(abs(k));
+order = 2;
+maxk = max(abs(k), [], 'all');
+eta   = abs(k) ./ maxk; % changed from abs(k) ./ ...
 fun   = @(x) exp(1./(order*x.*(x-1)));
-C     = pi/integral(fun,1/max(abs(k),[], 'all'),1-1/max(abs(k),[], 'all'));
+C     = pi/integral(fun,1/maxk,1-1/maxk);
 sigma   = C*eta.*exp(1./(order*eta.*(eta-1)));
 sigma(abs(eta-1)<1e-8)=0;
 

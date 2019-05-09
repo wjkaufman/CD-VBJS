@@ -30,7 +30,7 @@ funct = 'hill';
 
 os = 2^4; % spatial oversampling ratio 
         %(will use os^2 spatial values to inform every frequency value)
-std_noise = 4;
+std_noise = .5;
 
 %% problem setup
 
