@@ -53,11 +53,14 @@ v = -.1; dv = .1;
 [X,Y] = meshgrid(x,y);
 % define where the change region is
 changeRegion = (X >= u & X <= (u+du) & Y >= v & Y <= (v+dv));
+changeMagnitude = 5;
 [X_os,Y_os] = meshgrid(x_os,y_os);
-f_chgd = 5*(X >= u & X <= (u+du) & Y >= v & Y <= (v+dv)); % I think fine
-f_chgd_os = 5*(X_os >= u & X_os <= (u+du) & Y_os >= v & Y_os <= (v+dv)); % I think fine
-%F_CHGD(:,:,(Jprime+1):J) = repmat(f_chgd, 1, 1, J-Jprime);
-F_CHGD_os(:,:,(Jprime+1):J) = repmat(f_chgd_os, 1, 1, J-Jprime);
+f_chgd = changeMagnitude*(X >= u & X <= (u+du) & ...
+                          Y >= v & Y <= (v+dv));
+f_chgd_os = changeMagnitude*(X_os >= u & X_os <= (u+du) & ...
+                             Y_os >= v & Y_os <= (v+dv));
+%F_CHGD_os(:,:,(Jprime+1):J) = repmat(f_chgd_os, 1, 1, J-Jprime);
+F_CHGD_os(:,:,1:Jprime) = repmat(f_chgd_os, 1, 1, Jprime);
 
 if disp
     figure(20); colormap gray;

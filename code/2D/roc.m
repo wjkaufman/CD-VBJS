@@ -17,7 +17,7 @@ isChanged((Jprime+1):end) = true;
 eps = .1; 
 lam = .25; 
 order = 2;
-willDisp = false;
+willDisp = true;
 
 % ROC curve generation
 iter = 2^0; % number of iterations to perform for the ROC curve
@@ -30,7 +30,7 @@ funct = 'hill';
 
 os = 2^4; % spatial oversampling ratio 
         %(will use os^2 spatial values to inform every frequency value)
-std_noise = 2;
+std_noise = .5;
 
 %% problem setup
 
@@ -40,7 +40,7 @@ std_noise = 2;
 
 %% GLRT CD
 
-change = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, willDisp);
+[change, isArrival] = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, willDisp);
 
 %figure; imagesc(change); colorbar;
 
@@ -92,7 +92,7 @@ for i = 1:iter
     end
     
     [x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...
-    Jprime, funct, order, os, std_noise, willDisp);
+    Jprime, funct, order, os, std_noise, false);
     % below is what I had before for the 1D case
 %     [~, ~, ~, Y] = make_data(ref_func, chg_func, N, K, J, Jprime, ...
 %         noise, M, prefix, false);
@@ -100,7 +100,7 @@ for i = 1:iter
     % IDT I need the following
 %     [Ghat] = vbjs_reconstruct(N, K, J, Jprime, x, Y, L, prefix, willDisp);
 
-    change = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, willDisp);
+    [change, isArrival] = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, false);
     
     % isObsChanged is NxNxT logical matrix that records if pixel (i,j) is
     % measured as a change with threshold t
@@ -139,10 +139,3 @@ title('Receiver operator curve (detect = no change)');
 xlabel('PFA'); ylabel('PD');
 set(gcf, 'PaperPosition', [0 0 7 5]);
 set(gcf, 'PaperSize', [7 5]);
-
-% figure; imagesc(cumChanged'); title('Not sure what to call this');
-% % TODO change the axis numbers to correspond to x/thresh vals
-% xlabel('Domain'); ylabel('Threshold values');
-% set(gcf, 'PaperPosition', [0 0 7 5]);
-% set(gcf, 'PaperSize', [7 5]);
-% print([prefix sprintf('idk-N_%d-K_%d-J_%d', N, K, J)], '-dpdf');
