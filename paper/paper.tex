@@ -1,4 +1,9 @@
 % !TEX output_directory=output
+
+% TODO
+% - Clean up notation with N, K, k=-K,...,K (what am I actually doing in code?)
+% -
+
 \documentclass{article}
 
 \usepackage{kaufman}
@@ -63,9 +68,8 @@ As presented in~\cite{gelb_2018}, VBJS uses the information contained in the joi
 
 \begin{enumerate}
     \item Recover individual reconstructions of the scene in a sparse domain $P \in \C^{N\times J}$, containing $J$ reconstructions of the scene with $N$ values for each reconstruction.
-    \item Calculate the sample variance of $P$ across the $J$ measurements%
-    % TODO for each spatial value??
-    , and calculate weights according to
+    \item Calculate the sample variance of $P$ at each spatial point across the $J$ measurements% TODO check this
+    , and calculate weights $\{w_i\}_{i \in 0}^N$ according to
     \begin{equation}
         w_i = \begin{cases}
             C(1-\frac{v_i}{\max_i v_i}) & \text{if $i$ corresponds to an edge} \\
@@ -78,22 +82,26 @@ As presented in~\cite{gelb_2018}, VBJS uses the information contained in the joi
 
 \subsection{Concentration factors and jump function approximations}
 
-Because the original signal $f$ is assumed to be piecewise continuous, and is observed indirectly by way of Fourier coefficients $\hat{f_k}$, the sparse domain reconstruction $P$ (steps 1 and 2 of the VBJS algorithm outlined in~\ref{subsec:vbjs}) can be calculated using concentration factors to find the jump function approximation.
+Because the original signal $f$ is assumed to be piecewise continuous, and is observed indirectly by way of Fourier coefficients $\{\hat{f_k}\}_{k=-K}^K$, the sparse domain reconstruction $P$ (steps 1 and 2 of the VBJS algorithm outlined in~\ref{subsec:vbjs}) can be calculated using concentration factors to find the jump function approximation. Using concentration factors allows for more efficient computation of the jump function approximation compared with other optimization methods.
 
 For this investigation the exponential concentration factor was used, where the factor was of the following form:
 \begin{equation}\label{eq:conc_factor}
-    TODO change this to exponential factor (and get changed in code)
-    %\sigma_\text{poly}(k) = i\pi pk^p
+    \sigma(k) = i \text{sign}(k) \frac{\pi}{\int_{1/K}^{1-1/K} e^{1/(\alpha t (t-1))} \, dt} \eta e^{1/(\alpha \eta (\eta-1))}
 \end{equation}
+where $\alpha$ is the order of the exponential factor (which controls the spread of the concentration factor over different frequency values), and $\eta = |k|/K$.
 
-The jump function approximation for the $j$th measurement can then be calculated using the concentration factor by
+The jump function approximation at spatial coordinate $x$ can then be calculated using the concentration factor by
 \[
-p_j = \Re\{ \mathcal{F}^{-1}(\hat{\mathbf{f}}^\sigma_j) \}
+p_{x} = \sum_{k=-K}^K \sigma(k) \hat{f}_k e^{ikx}
 \]
-so that % TODO define p_i, see how I did it in code (and how it's supposed to be done...)
-%$p_i \in \R^{N \times 1}$ and $P = [p_1, \dots, p_j]$.
+which is equivalent to the inverse discrete Fourier transform where the Fourier coefficients $\hat{f}_k$ are weighted by $\sigma(k)$. The jump function approximation is calculated at each of the spatial locations in the domain, resulting in the vector $\mathbf{p}_j \in \C^{N \times 1}$ for measurement $j$. The matrix $J \in \C^{N \times J}$ is the jump function approximation  column vectors for each of the $J$ measurements.
 
-Using concentration factors allows for more efficient computation of the jump function approximation compared with other optimization methods.
+Once $P$ is calculated, the VBJS algorithm from~\ref{subsec:vbjs} can be completed by calculating the variance of $P$ for each spatial point across the $J$ measurements, and then determining the weights
+
+When using concentration factors in two or more dimensions, the procedure above is applied to each spatial dimension separately. The matrix $P$ is then an $N \times J \times D$ complex matrix, where $D$ is the number of dimensions. % TODO talk about VBJS weights then...
+
+
+
 
 \subsection{Generalized likelihood-ratio test (GLRT)}
 
