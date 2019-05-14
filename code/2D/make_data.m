@@ -1,5 +1,6 @@
 function [x, y, f, Y, SNR, ...
-    f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, Jprime, funct, order, os, std_noise, disp)
+    f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, Jprime, ...
+                                    funct, order, os, std_noise, disp)
 % returns noisy data with changes, and optionally prints graphs to files
 %
 % funct: string that determines function type
@@ -59,8 +60,9 @@ f_chgd = changeMagnitude*(X >= u & X <= (u+du) & ...
                           Y >= v & Y <= (v+dv));
 f_chgd_os = changeMagnitude*(X_os >= u & X_os <= (u+du) & ...
                              Y_os >= v & Y_os <= (v+dv));
-%F_CHGD_os(:,:,(Jprime+1):J) = repmat(f_chgd_os, 1, 1, J-Jprime);
-F_CHGD_os(:,:,1:Jprime) = repmat(f_chgd_os, 1, 1, Jprime);
+F_CHGD_os(:,:,(Jprime+1):J) = repmat(f_chgd_os, 1, 1, J-Jprime);
+% make change in the first Jprime (so that the "change" is a removal)
+% F_CHGD_os(:,:,1:Jprime) = repmat(f_chgd_os, 1, 1, Jprime);
 
 if disp
     figure(20); colormap gray;
@@ -132,13 +134,18 @@ for ii = 1:J
         plot(x,f_meas(N/2,:,ii),'linewidth',1.25);
     end
     
-    % and sparse domain calculation
-    jump_x = real(reshape(AH(...
-        conc_factor(k_mat).*Y(:,:,ii)), N, N));
-    jump_y = real(reshape(AH(...
-        conc_factor(l_mat).*Y(:,:,ii)), N, N));
-    f_jump(:,:,ii,1) = jump_x;
-    f_jump(:,:,ii,2) = jump_y;
+    % and jump function calculation
+    conc_factor_orders = [1, 4, 16];
+    jump_x_mat = zeros(N,N, length(conc_factor_orders));
+    jump_y_mat = zeros(N,N,length(conc_factor_orders));
+    for jj = 1:numel(conc_factor_orders)
+        jump_x_mat(:,:,jj) = real(reshape(AH(...
+            conc_factor(k_mat, conc_factor_orders(jj)).*Y(:,:,ii)), N, N));
+        jump_y_mat(:,:,jj) = real(reshape(AH(...
+            conc_factor(l_mat, conc_factor_orders(jj)).*Y(:,:,ii)), N, N));
+    end
+    f_jump(:,:,ii,1) = minmod(jump_x_mat);
+    f_jump(:,:,ii,2) = minmod(jump_y_mat);
 end
 
 SNR = mean(SNR, 'all');
@@ -160,7 +167,7 @@ end
 if disp
     % plot jump function
     figure; colormap gray;
-    imagesc(x,y,f_jump(:,:,5,1));
+    imagesc(x,y,f_jump(:,:,J,1));
     colorbar; axis xy image;
     title('Jump function approx. in x direction');
     h = xlabel('$x$');
@@ -171,7 +178,7 @@ if disp
     set(gca,'fontname','times','fontsize',16);
 
     figure; colormap gray;
-    imagesc(x,y,f_jump(:,:,5,2));
+    imagesc(x,y,f_jump(:,:,J,2));
     colorbar; axis xy image;
     title('Jump function approx. in y direction');
     h = xlabel('$x$');

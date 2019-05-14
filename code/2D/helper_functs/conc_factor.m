@@ -1,12 +1,8 @@
-function [sigma] = conc_factor(k)
+function [sigma] = conc_factor(k, order)
 %%%%%%%%%%%%%%%%%%
 % Concentration factors
 % for this work, exponential factor is used, code originally from
 % Theresa Scarnati, 2019
-
-
-% Previously, the polynomial factor in Gelb 2011 eq(11) was used
-% as in paper, p=5 was used
 %%%%%%%%%%%%%%%%%%
 
 % polynomial factor
@@ -15,7 +11,7 @@ function [sigma] = conc_factor(k)
 % sigma = 2 * sigma / sqrt(numel(k)); % fix scaling issues
 
 % exponential factor
-order = 2^1;
+% order: order of the exponential factor (controls spread of sigma)
 maxk = max(abs(k), [], 'all');
 eta   = abs(k) ./ maxk; % changed from abs(k) ./ ...
 fun   = @(x) exp(1./(order*x.*(x-1)));
@@ -27,6 +23,4 @@ sigma = 1i .* sign(k) .* sigma; % my own twist, trying to replicate good results
 % trig factor
 % sigma = sin(pi * k) / sinint(pi);
 % sigma = sigma / pi;
-
-
 end
