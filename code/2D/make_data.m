@@ -1,13 +1,18 @@
 function [x, y, f, Y, SNR, ...
     f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, Jprime, ...
-                                    funct, order, os, std_noise, disp)
+                                    funct, order, os, underdetRatio, std_noise, disp)
 % returns noisy data with changes, and optionally prints graphs to files
 %
 %%% inputs %%%
+% N: number of spatial values per dimension (so 2D image is N^2 pixels)
+% J: total number of measurements
+% J': total number of reference measurements (no change)
 % funct: string that determines function type
 % os: oversampling ratio to determine Fourier coefficients
+% undetRatio: level of underdeterminedness (0.8 = 80% of Fourier
+%   coefficients are kept)
 % std_noise: standard deviation of noise in frequency domain
-% disp: boolean (to display plots)
+% disp: boolean to display plots
 %
 %%% outputs %%%
 % x/y: spatial gridpoints on which measurements are made
@@ -77,12 +82,12 @@ if disp
     set(gca,'fontname','times','fontsize',16);
 end
 
-% forward operator
-% A is Fourier operator, AH is adjoint (= inverse)
-A =  @(u) reshape(fft2(reshape(u, N, N)) / sqrt(numel(u)), N^2, 1);
-AH = @(u) reshape(ifft2(reshape(u, N, N)) *sqrt(numel(u)), N^2, 1);
+% forward, inverse operators
+% Fourier is Fourier operator, invFourier is adjoint (= inverse)
+Fourier =  @(u) reshape(fft2(reshape(u, N, N)) / sqrt(numel(u)), N^2, 1);
+invFourier = @(u) reshape(ifft2(reshape(u, N, N)) *sqrt(numel(u)), N^2, 1);
 % separate operator for oversampling in spatial domain
-A_os =  @(u) reshape(fft2(reshape(u, os*N, os*N)) / sqrt(os^2*numel(u)), (os*N)^2, 1);
+Fourier_os =  @(u) reshape(fft2(reshape(u, os*N, os*N)) / sqrt(os^2*numel(u)), (os*N)^2, 1);
 
 Y = zeros(N,N,J);
 f_meas = zeros(N,N,J);
@@ -100,17 +105,21 @@ end
 
 % observe J measurements
 for ii = 1:J
-    sprintf('on iter %d', ii)
+    sprintf('on measurement %d', ii)
     tmp = f_os+F_CHGD_os(:,:,ii); % add change to data
-    Y_os = reshape(A_os(tmp), os*N, os*N) + noise_os(:,:,ii);
+    Y_os = reshape(Fourier_os(tmp), os*N, os*N) + noise_os(:,:,ii);
     SNR(ii) = snr(Y_os-noise_os(:,:,ii), noise_os(:,:,ii));
     % downsample the Fourier coefficients to only get low-frequency
     % info (what we'd normally get if we measured according to the
     % normal spatial gridpoints
     Y(:,:,ii) = Y_os([1:floor(N/2), ceil(N*(os-.5)+1):os*N], ...
         [1:floor(N/2), ceil(N*(os-.5)+1):os*N]);
+    % remove Fourier coefficients randomly to create underdetermined system
+    underdetMat = zeros(N, N);
+    underdetMat(randsample(N^2, round(N^2 * underdetRatio))) = 1;
+    Y(:,:,ii) = underdetMat .* Y(:,:,ii);
     
-    f_star = real(reshape(AH(Y(:,:,ii)), N, N)); % do inverse Fourier
+    f_star = real(reshape(invFourier(Y(:,:,ii)), N, N)); % do inverse Fourier
     f_meas(:,:,ii) = f_star;
     
     if disp
@@ -122,9 +131,9 @@ for ii = 1:J
     jump_x_mat = zeros(N,N, length(conc_factor_orders));
     jump_y_mat = zeros(N,N,length(conc_factor_orders));
     for jj = 1:numel(conc_factor_orders)
-        jump_x_mat(:,:,jj) = real(reshape(AH(...
+        jump_x_mat(:,:,jj) = real(reshape(invFourier(...
             conc_factor(k_mat, conc_factor_orders(jj)).*Y(:,:,ii)), N, N));
-        jump_y_mat(:,:,jj) = real(reshape(AH(...
+        jump_y_mat(:,:,jj) = real(reshape(invFourier(...
             conc_factor(l_mat, conc_factor_orders(jj)).*Y(:,:,ii)), N, N));
     end
     f_jump(:,:,ii,1) = minmod(jump_x_mat);
@@ -240,7 +249,7 @@ opts_wl1.data_mlp = true;
 opts_wl1.disp = 0;
 opts_wl1.order = order;
 
-[f_VBJS_wl1,~] = ADMM2(A,AH,data_js,[N,N],opts_wl1);
+[f_VBJS_wl1,~] = ADMM2(Fourier,invFourier,data_js,[N,N],opts_wl1);
 
 if disp
     figure;

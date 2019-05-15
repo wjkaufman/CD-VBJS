@@ -28,14 +28,17 @@ thresh = reshape(linspace(0, 1, T), [1,1,T]);
 thresh = repmat(thresh, N, N, 1);
 funct = 'hill';
 
-os = 2^4; % spatial oversampling ratio
-        %(will use os^2 spatial values to inform every frequency value)
+% spatial oversampling ratio
+%(will use os^2 spatial values to inform every frequency value)
+os = 2^4;
+% level of underdeterminedness (fraction of data kept for analysis)
+underdetRatio = 0.9;
 std_noise = .5;
 
 %% problem setup
 
 [x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...
-    Jprime, funct, order, os, std_noise, willDisp);
+    Jprime, funct, order, os, underdetRatio, std_noise, willDisp);
 
 
 %% GLRT CD
@@ -79,7 +82,7 @@ for i = 1:iter
     end
     
     [x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...
-    Jprime, funct, order, os, std_noise, false);
+    Jprime, funct, order, os, underdetRatio, std_noise, false);
     % below is what I had before for the 1D case
 %     [~, ~, ~, Y] = make_data(ref_func, chg_func, N, K, J, Jprime, ...
 %         noise, M, prefix, false);
