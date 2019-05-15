@@ -14,8 +14,8 @@ isChanged = false(1, J); % 1xJ vector that indicates whether measurement
     % is of a "changed" scene
 isChanged((Jprime+1):end) = true;
 
-eps = .1; 
-lam = .25; 
+eps = .1;
+lam = .25;
 order = 2;
 willDisp = true;
 
@@ -28,7 +28,7 @@ thresh = reshape(linspace(0, 1, T), [1,1,T]);
 thresh = repmat(thresh, N, N, 1);
 funct = 'hill';
 
-os = 2^4; % spatial oversampling ratio 
+os = 2^4; % spatial oversampling ratio
         %(will use os^2 spatial values to inform every frequency value)
 std_noise = .5;
 
@@ -63,19 +63,6 @@ pfa2 = zeros(T, 1);
 cumChanged = zeros(N, N, T); % (i,j,t) = fraction of time the pixel (i,j)
             % is marked as a change with threshold t
 
-% OLD CODE (TODO: remove)
-% % define where actual changes and actual no changes occured (try multiple)
-% ac1 = false(N, T);
-% ac1(abs(x) > .2 & abs(x) < .23, :) = true; % change occurs in [.2,.25]
-% anc1 = false(N, T);
-% anc1(abs(x) > .4, :) = true;
-% 
-% % define another one, harder
-% ac2 = false(N,T);
-% ac2(abs(x) > .23 & abs(x) < .25, :) = true;
-% anc2 = false(N,T);
-% anc2(abs(x) > .25 & abs(x) < .3, :) = true;
-
 disp(['Signal to noise ratio is ' num2str(SNR)]);
 
 for i = 1:iter
@@ -109,10 +96,7 @@ for i = 1:iter
     cumChanged = cumChanged + isObsChanged;
     % check if estimated changes match with true changes
     % and see how often estimated changes match with no true changes
-    %
-    % TODO as of 2019-04-22 15:41
-    % figure out how to get pd, pfa correct (currently looks very weird...)
-    %
+    
     pd1 = pd1 + reshape(sum(isObsChanged(ac + N^2 * (0:(T-1))), 1) / ...
                            (numel(ac)), T, 1);
     pd2 = pd2 + reshape(sum(~isObsChanged(anc + N^2 * (0:(T-1))), 1) / ...
@@ -125,7 +109,7 @@ end
 
 cumChanged = cumChanged / iter;
 pd1 = pd1 / iter; pd2 = pd2 / iter;
-pfa1 = pfa1 / iter; pfa2 = pfa2 / iter; 
+pfa1 = pfa1 / iter; pfa2 = pfa2 / iter;
 
 % then plot stuff
 figure; plot(pfa1, pd1, '-*', [0 1], [0 1], 'k-.');

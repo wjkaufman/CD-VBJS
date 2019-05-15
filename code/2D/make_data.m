@@ -3,12 +3,13 @@ function [x, y, f, Y, SNR, ...
                                     funct, order, os, std_noise, disp)
 % returns noisy data with changes, and optionally prints graphs to files
 %
+%%% inputs %%%
 % funct: string that determines function type
 % os: oversampling ratio to determine Fourier coefficients
 % std_noise: standard deviation of noise in frequency domain
 % disp: boolean (to display plots)
 %
-% outputs
+%%% outputs %%%
 % x/y: spatial gridpoints on which measurements are made
 % f: NxN true image of underlying scene
 % Y: NxNxJ Fourier coefficients
@@ -76,26 +77,12 @@ if disp
     set(gca,'fontname','times','fontsize',16);
 end
 
-% add false information too (one step at a time though)
-% TODO _eventually_ add false information
-
 % forward operator
 % A is Fourier operator, AH is adjoint (= inverse)
-A =  @(u) reshape(fft2(reshape(u, N, N)) / sqrt(numel(u)), N^2, 1); 
+A =  @(u) reshape(fft2(reshape(u, N, N)) / sqrt(numel(u)), N^2, 1);
 AH = @(u) reshape(ifft2(reshape(u, N, N)) *sqrt(numel(u)), N^2, 1);
 % separate operator for oversampling in spatial domain
-A_os =  @(u) reshape(fft2(reshape(u, os*N, os*N)) / sqrt(os^2*numel(u)), (os*N)^2, 1); 
-
-% PA operator 
-PA = PA_Operator_1D(N,order);
-
-% noisy data and measurements 
-% opts.outer_iter = 50; 
-% opts.inner_iter = 20; 
-% opts.scale_b = false; 
-% opts.scale_A = false; 
-% opts.weighted = false; 
-% opts.data_mlp = true; 
+A_os =  @(u) reshape(fft2(reshape(u, os*N, os*N)) / sqrt(os^2*numel(u)), (os*N)^2, 1);
 
 Y = zeros(N,N,J);
 f_meas = zeros(N,N,J);
@@ -106,20 +93,19 @@ k_vals = [0:N/2 -N/2+1:-1];
 l_vals = k_vals'; % might be different if image is not square
 k_mat = repmat(k_vals, N, 1);
 l_mat = repmat(l_vals, 1, N);
-PAf_meas = zeros(N,N,J);
-PAf_meas_vec = zeros(N^2,J);
 SNR = zeros(1,J);
 if disp
     figure; plot(x,f(:,N/2),'k--','linewidth',1.25); hold on;
 end
+
+% observe J measurements
 for ii = 1:J
     sprintf('on iter %d', ii)
     tmp = f_os+F_CHGD_os(:,:,ii); % add change to data
     Y_os = reshape(A_os(tmp), os*N, os*N) + noise_os(:,:,ii);
-    % TODO how to compute SNR??
     SNR(ii) = snr(Y_os-noise_os(:,:,ii), noise_os(:,:,ii));
     % downsample the Fourier coefficients to only get low-frequency
-    % info (what we'd normally get if we measured according to the 
+    % info (what we'd normally get if we measured according to the
     % normal spatial gridpoints
     Y(:,:,ii) = Y_os([1:floor(N/2), ceil(N*(os-.5)+1):os*N], ...
         [1:floor(N/2), ceil(N*(os-.5)+1):os*N]);
@@ -127,9 +113,6 @@ for ii = 1:J
     f_star = real(reshape(AH(Y(:,:,ii)), N, N)); % do inverse Fourier
     f_meas(:,:,ii) = f_star;
     
-    % old code (TODO still need?)
-    PAf_meas(:,:,ii) = real(PA*f_star + f_star*PA);
-    PAf_meas_vec(:,ii) = col(PAf_meas(:,:,ii));
     if disp
         plot(x,f_meas(N/2,:,ii),'linewidth',1.25);
     end
@@ -159,13 +142,8 @@ if disp
     set(gca,'fontname','times','fontsize',16);
 end
 
-% TODO
-% filter jump functions by comparing sign across all
-% measurement vectors: if same sign -> keep value
-% if different sign -> set jump to 0
-
 if disp
-    % plot jump function
+    % plot jump function in x direction
     figure; colormap gray;
     imagesc(x,y,f_jump(:,:,J,1));
     colorbar; axis xy image;
@@ -176,7 +154,8 @@ if disp
     h = ylabel('$y$');
     set(h,'interpreter','latex','fontsize',18);
     set(gca,'fontname','times','fontsize',16);
-
+    
+    % jump function in y direction
     figure; colormap gray;
     imagesc(x,y,f_jump(:,:,J,2));
     colorbar; axis xy image;
@@ -190,40 +169,20 @@ if disp
 end
 
 %% optimal data vector
-% only want to get best _reference_ image, so just look through that
-% TODO: or do I just want to manually set j_star = 1? A priori reason
-% that this should be our reference (we're calling this t=0)...
-% I'm manually setting j_star, so replaced it in line below with `~`
+% only want to get best _reference_ image, which would be first one
 % [~,meas_mat] = get_VWJSdata(reshape(f_meas(:,:,1:(J)),N^2,J));
 % [j_star,meas_mat] = get_VWJSdata(...
 %     reshape(f_meas(:,:,1:(Jprime)),N^2,Jprime));
 % data_js = Y(:,:,j_star);
 
 % manually set optimal data vector for CD
-% TODO this should be changed, yes?
 j_star = 1;
 data_js = Y(:,:,j_star);
-
-% figure; imagesc(meas_mat);
-% colorbar;
-% h = xlabel('measurement number');
-% set(h,'interpreter','latex','fontsize',18);
-% h = ylabel('measurement number');
-% set(h,'interpreter','latex','fontsize',18);
-% set(gca,'fontname','times','fontsize',16);
-
-% figure;
-% colormap gray
-% imagesc(x,y,real(f_meas(:,:,j_star)),dyn_range);
-% axis xy image
-% xticks([]); 
-% yticks([]);
 
 %% variance and weights
 
 % variance
 v = var(f_jump,1,3);
-%v = reshape(v,N,N); 
 
 if disp
     % plot variance in x direction
@@ -247,34 +206,30 @@ W(:,:,2) = reshape(wy, N, N);
 if disp
     figure; imagesc(x,y,W(:,:,1));
     axis xy image; colorbar;
-    xticks([]); 
+    xticks([]);
     yticks([]);
 
     figure; imagesc(x,y,W(:,:,2));
     axis xy image; colorbar;
-    xticks([]); 
+    xticks([]);
     yticks([]);
 end
 
-% for now, just take the minimum of the weights (not sure
-%   how to do ADMM with two terms to minimize)
-% TODO figure this out!
-
+% take weights to be minimum o W_x, W_y
 W = min(W, [], 3);
+
 if disp
     figure; imagesc(x,y,W);
     title('min weight from both');
     axis xy image; colorbar;
-    xticks([]); 
+    xticks([]);
     yticks([]);
 end
 %% reconstructions
 
-%W = ones(N,N);
-
-% VBJS wl1
+% VBJS wl1 optimization parameters
 opts_wl1.mu =1 ;
-opts_wl1.beta = 1; 
+opts_wl1.beta = 1;
 opts_wl1.outer_iter = 50;
 opts_wl1.inner_iter = 20;
 opts_wl1.scale_b = true;
@@ -286,7 +241,6 @@ opts_wl1.disp = 0;
 opts_wl1.order = order;
 
 [f_VBJS_wl1,~] = ADMM2(A,AH,data_js,[N,N],opts_wl1);
-% not storing out_wl1 (second output)
 
 if disp
     figure;
@@ -294,29 +248,8 @@ if disp
     imagesc(x,y,real(f_VBJS_wl1),dyn_range);
     axis xy image; colorbar;
     title('ADMM reconstruction')
-    xticks([]); 
+    xticks([]);
     yticks([]);
 end
-% %%
-% % VBJS wl2
-% opts_wl2.max_it = 100; 
-% opts_wl2.tol = 1e-10; 
-% opts_wl2.max_bt = 25; 
-% opts_wl2.delta = 1e-5; 
-% opts_wl2.rho = .4; 
-% opts_wl2.order = order; 
-% opts_wl2.tau = 1; 
-% opts_wl2.lam = 1; 
-% opts_wl2.disp = 0; 
-% opts_wl2.dyn_range = dyn_range; 
-% opts_wl2.f_init = A_mat\data_js; 
-% 
-% [f_VBJS_wl2,out_wl2] = grad_descent_mmv(A,AH,data_js,10*W/max(max(W)),[N,N],opts_wl2); 
-% 
-% figure; colormap gray
-% imagesc(x,y,real(f_VBJS_wl2),dyn_range);
-% axis xy image
-% xticks([]); 
-% yticks([]);
 
 end
