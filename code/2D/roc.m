@@ -20,9 +20,9 @@ order = 2;
 willDisp = true;
 
 % ROC curve generation
-iter = 2^0; % number of iterations to perform for the ROC curve
-numDetect = 8; % number of pixels in changed region to sample
-numFA = 8; % number of pixels in unchanged region to sample
+iter = 2^2; % number of iterations to perform for the ROC curve
+numDetect = 2^4; % number of pixels in changed region to sample
+numFA = 2^4; % number of pixels in unchanged region to sample
 T = 64; % number of threshold values to evaluate at (points along curve)
 thresh = reshape(linspace(0, 1, T), [1,1,T]);
 thresh = repmat(thresh, N, N, 1);
@@ -32,8 +32,8 @@ funct = 'hill';
 %(will use os^2 spatial values to inform every frequency value)
 os = 2^4;
 % level of underdeterminedness (fraction of data kept for analysis)
-underdetRatio = 0.9;
-std_noise = .5;
+underdetRatio = 0.95;
+std_noise = 1;
 
 %% problem setup
 
@@ -113,6 +113,9 @@ end
 cumChanged = cumChanged / iter;
 pd1 = pd1 / iter; pd2 = pd2 / iter;
 pfa1 = pfa1 / iter; pfa2 = pfa2 / iter;
+
+
+csvwrite('roc_data.csv', [pfa1, pd1, pfa2, pd2])
 
 % then plot stuff
 figure; plot(pfa1, pd1, '-*', [0 1], [0 1], 'k-.');

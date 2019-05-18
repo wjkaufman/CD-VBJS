@@ -1,6 +1,6 @@
 function [x, y, f, Y, SNR, ...
     f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, Jprime, ...
-                                    funct, order, os, underdetRatio, std_noise, disp)
+                                    funct, order, os, underdetRatio, std_noise, willDisp)
 % returns noisy data with changes, and optionally prints graphs to files
 %
 %%% inputs %%%
@@ -34,7 +34,7 @@ y = linspace(-1,1,N);
 x_os = linspace(-1,1,os*N);
 y_os = linspace(-1,1,os*N);
 
-if disp
+if willDisp
     figure;
     colormap gray;
     imagesc(x,y,f,dyn_range);
@@ -70,7 +70,7 @@ F_CHGD_os(:,:,(Jprime+1):J) = repmat(f_chgd_os, 1, 1, J-Jprime);
 % make change in the first Jprime (so that the "change" is a removal)
 % F_CHGD_os(:,:,1:Jprime) = repmat(f_chgd_os, 1, 1, Jprime);
 
-if disp
+if willDisp
     figure(20); colormap gray;
     imagesc(x,y,f_chgd+f,dyn_range);
     colorbar; axis xy image;
@@ -99,13 +99,13 @@ l_vals = k_vals'; % might be different if image is not square
 k_mat = repmat(k_vals, N, 1);
 l_mat = repmat(l_vals, 1, N);
 SNR = zeros(1,J);
-if disp
+if willDisp
     figure; plot(x,f(:,N/2),'k--','linewidth',1.25); hold on;
 end
 
 % observe J measurements
 for ii = 1:J
-    sprintf('on measurement %d', ii)
+    disp(['on measurement ', num2str(ii)]);
     tmp = f_os+F_CHGD_os(:,:,ii); % add change to data
     Y_os = reshape(Fourier_os(tmp), os*N, os*N) + noise_os(:,:,ii);
     SNR(ii) = snr(Y_os-noise_os(:,:,ii), noise_os(:,:,ii));
@@ -122,7 +122,7 @@ for ii = 1:J
     f_star = real(reshape(invFourier(Y(:,:,ii)), N, N)); % do inverse Fourier
     f_meas(:,:,ii) = f_star;
     
-    if disp
+    if willDisp
         plot(x,f_meas(N/2,:,ii),'linewidth',1.25);
     end
     
@@ -142,7 +142,7 @@ end
 
 SNR = mean(SNR, 'all');
 
-if disp
+if willDisp
     h = xlabel('$x$');
     xlim([min(x) max(x)]);
     set(h,'interpreter','latex','fontsize',18);
@@ -151,7 +151,7 @@ if disp
     set(gca,'fontname','times','fontsize',16);
 end
 
-if disp
+if willDisp
     % plot jump function in x direction
     figure; colormap gray;
     imagesc(x,y,f_jump(:,:,J,1));
@@ -193,7 +193,7 @@ data_js = Y(:,:,j_star);
 % variance
 v = var(f_jump,1,3);
 
-if disp
+if willDisp
     % plot variance in x direction
     figure; imagesc(x,y,v(:,:,1)); title('variance in x direction');
     colorbar; axis xy image;
@@ -212,7 +212,7 @@ W = zeros(N,N, 2);
 W(:,:,1) = reshape(wx, N, N);
 W(:,:,2) = reshape(wy, N, N);
 
-if disp
+if willDisp
     figure; imagesc(x,y,W(:,:,1));
     axis xy image; colorbar;
     xticks([]);
@@ -227,7 +227,7 @@ end
 % take weights to be minimum o W_x, W_y
 W = min(W, [], 3);
 
-if disp
+if willDisp
     figure; imagesc(x,y,W);
     title('min weight from both');
     axis xy image; colorbar;
@@ -251,7 +251,7 @@ opts_wl1.order = order;
 
 [f_VBJS_wl1,~] = ADMM2(Fourier,invFourier,data_js,[N,N],opts_wl1);
 
-if disp
+if willDisp
     figure;
     colormap gray
     imagesc(x,y,real(f_VBJS_wl1),dyn_range);
