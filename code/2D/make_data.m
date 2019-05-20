@@ -25,8 +25,13 @@ function [x, y, f, Y, SNR, ...
 % changeRegion: NxN logical for where the change actually was
 
 % true image
-f = get_img(funct,N);
-f_os = get_img(funct,os*N);
+numTargets = 64;
+f = get_img_pttarget(N, numTargets, 0);
+f_os = get_img_pttarget(os*N, numTargets, 0);
+% TODO fix this, this will make two different changed images...
+f_chg_os = get_img_pttarget(os*N, numTargets, .25);
+f_chg = get_img_pttarget(N, numTargets, .25); % change 25% of pt targets
+changeRegion = f_chg ~= 0; % changed region, simple for point target code
 dyn_range = [min(min(f)),max(max(f))];
 
 x = linspace(-1,1,N);
@@ -51,28 +56,9 @@ end
 %noise = std_noise*randn(N,N,J);% + 1i*std_noise*randn(N,N,M);
 noise_os = std_noise*randn(os*N,os*N,J);
 
-% changed data, goes at the front of the list of measurements
-%F_CHGD = zeros(N,N,J);
-F_CHGD_os = zeros(os*N,os*N,J);
-% make consistent change for last J-Jprime measurements
-u = -.75; du = .1;
-v = -.1; dv = .1;
-[X,Y] = meshgrid(x,y);
-% define where the change region is
-changeRegion = (X >= u & X <= (u+du) & Y >= v & Y <= (v+dv));
-changeMagnitude = 5;
-[X_os,Y_os] = meshgrid(x_os,y_os);
-f_chgd = changeMagnitude*(X >= u & X <= (u+du) & ...
-                          Y >= v & Y <= (v+dv));
-f_chgd_os = changeMagnitude*(X_os >= u & X_os <= (u+du) & ...
-                             Y_os >= v & Y_os <= (v+dv));
-F_CHGD_os(:,:,(Jprime+1):J) = repmat(f_chgd_os, 1, 1, J-Jprime);
-% make change in the first Jprime (so that the "change" is a removal)
-% F_CHGD_os(:,:,1:Jprime) = repmat(f_chgd_os, 1, 1, Jprime);
-
 if willDisp
     figure(20); colormap gray;
-    imagesc(x,y,f_chgd+f,dyn_range);
+    imagesc(x,y,f_chg,dyn_range);
     colorbar; axis xy image;
     h = xlabel('$x$');
     xlim([min(x) max(x)]);
@@ -106,7 +92,11 @@ end
 % observe J measurements
 for ii = 1:J
     disp(['on measurement ', num2str(ii)]);
-    tmp = f_os+F_CHGD_os(:,:,ii); % add change to data
+    if ii <= Jprime % reference image
+        tmp = f_os;
+    else % changed image
+        tmp = f_chg_os;
+    end
     Y_os = reshape(Fourier_os(tmp), os*N, os*N) + noise_os(:,:,ii);
     SNR(ii) = snr(Y_os-noise_os(:,:,ii), noise_os(:,:,ii));
     % downsample the Fourier coefficients to only get low-frequency
@@ -214,12 +204,12 @@ W(:,:,2) = reshape(wy, N, N);
 
 if willDisp
     figure; imagesc(x,y,W(:,:,1));
-    axis xy image; colorbar;
+    axis xy image; colorbar; title('weights for x direction');
     xticks([]);
     yticks([]);
 
-    figure; imagesc(x,y,W(:,:,2));
-    axis xy image; colorbar;
+    figure; imagesc(x,y,W(:,:,2)); 
+    axis xy image; colorbar; title('weights for x direction');
     xticks([]);
     yticks([]);
 end

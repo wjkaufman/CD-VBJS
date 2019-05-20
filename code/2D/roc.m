@@ -5,7 +5,7 @@ clear all;
 close all;
 addpath('helper_functs');
 
-%% define parameters of run
+% define parameters of run
 
 N = 128;
 J = 5;
@@ -32,12 +32,12 @@ funct = 'hill';
 %(will use os^2 spatial values to inform every frequency value)
 os = 2^4;
 % level of underdeterminedness (fraction of data kept for analysis)
-underdetRatio = 0.95;
-std_noise = 1;
+underdetRatio = 1;
+std_noise = 0;
 
-%% problem setup
+% problem setup
 
-[x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...
+[x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...-
     Jprime, funct, order, os, underdetRatio, std_noise, willDisp);
 
 
@@ -54,6 +54,8 @@ diffMat = -1 * eye(N);
 diffMat((N+1):N+1:end) = 1;
 diffMat(end,:) = zeros(1,N);
 L = diffMat;
+
+%% ROC generation
 
 % ROC stuff
 % want to see how varying threshold T impacts PD and PFA
