@@ -20,7 +20,7 @@ order = 2;
 willDisp = true;
 
 % ROC curve generation
-iter = 2^0; % number of iterations to perform for the ROC curve
+iter = 2^1; % number of iterations to perform for the ROC curve
 numDetect = 8; % number of pixels in changed region to sample
 numFA = 8; % number of pixels in unchanged region to sample
 T = 64; % number of threshold values to evaluate at (points along curve)
@@ -127,15 +127,13 @@ cumChanged = cumChanged / iter;
 pd1 = pd1 / iter; pd2 = pd2 / iter;
 pfa1 = pfa1 / iter; pfa2 = pfa2 / iter; 
 
-% then plot stuff
+% then plot ROC curves
 figure; plot(pfa1, pd1, '-*', [0 1], [0 1], 'k-.');
 title('Receiver operator curve (detect = change)');
 xlabel('PFA'); ylabel('PD');
-set(gcf, 'PaperPosition', [0 0 7 5]);
-set(gcf, 'PaperSize', [7 5]);
+savefig('graphics/ROC_1');
 
 figure; plot(pfa2, pd2, '-*', [0 1], [0 1], 'k-.');
 title('Receiver operator curve (detect = no change)');
 xlabel('PFA'); ylabel('PD');
-set(gcf, 'PaperPosition', [0 0 7 5]);
-set(gcf, 'PaperSize', [7 5]);
+savefig('graphics/ROC_2');

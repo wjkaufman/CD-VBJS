@@ -30,8 +30,8 @@ y_os = linspace(-1,1,os*N);
 
 if disp
     figure;
-    colormap gray;
     imagesc(x,y,f,dyn_range);
+    colormap gray;
     colorbar; axis xy image;
     h = xlabel('$x$');
     xlim([min(x) max(x)]);
@@ -39,6 +39,7 @@ if disp
     h = ylabel('$y$');
     set(h,'interpreter','latex','fontsize',18);
     set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/f');
 end
 
 % noise
@@ -65,7 +66,7 @@ F_CHGD_os(:,:,(Jprime+1):J) = repmat(f_chgd_os, 1, 1, J-Jprime);
 % F_CHGD_os(:,:,1:Jprime) = repmat(f_chgd_os, 1, 1, Jprime);
 
 if disp
-    figure(20); colormap gray;
+    figure(); colormap gray;
     imagesc(x,y,f_chgd+f,dyn_range);
     colorbar; axis xy image;
     h = xlabel('$x$');
@@ -74,6 +75,7 @@ if disp
     h = ylabel('$y$');
     set(h,'interpreter','latex','fontsize',18);
     set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/f_chg');
 end
 
 % add false information too (one step at a time though)
@@ -157,6 +159,7 @@ if disp
     h = ylabel('$f(x,0)$');
     set(h,'interpreter','latex','fontsize',18);
     set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/f__cross_sec');
 end
 
 % TODO
@@ -176,6 +179,7 @@ if disp
     h = ylabel('$y$');
     set(h,'interpreter','latex','fontsize',18);
     set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/f_jump_x');
 
     figure; colormap gray;
     imagesc(x,y,f_jump(:,:,J,2));
@@ -187,6 +191,7 @@ if disp
     h = ylabel('$y$');
     set(h,'interpreter','latex','fontsize',18);
     set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/f_jump_y');
 end
 
 %% optimal data vector
@@ -204,21 +209,6 @@ end
 j_star = 1;
 data_js = Y(:,:,j_star);
 
-% figure; imagesc(meas_mat);
-% colorbar;
-% h = xlabel('measurement number');
-% set(h,'interpreter','latex','fontsize',18);
-% h = ylabel('measurement number');
-% set(h,'interpreter','latex','fontsize',18);
-% set(gca,'fontname','times','fontsize',16);
-
-% figure;
-% colormap gray
-% imagesc(x,y,real(f_meas(:,:,j_star)),dyn_range);
-% axis xy image
-% xticks([]); 
-% yticks([]);
-
 %% variance and weights
 
 % variance
@@ -228,13 +218,14 @@ v = var(f_jump,1,3);
 if disp
     % plot variance in x direction
     figure; imagesc(x,y,v(:,:,1)); title('variance in x direction');
-    colorbar; axis xy image;
+    colormap gray; colorbar; axis xy image;
     h = xlabel('$x$');
     xlim([min(x) max(x)]);
     set(h,'interpreter','latex','fontsize',18);
     h = ylabel('$y$');
     set(h,'interpreter','latex','fontsize',18);
     set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/var_x');
 end
 
 % weights
@@ -246,14 +237,27 @@ W(:,:,2) = reshape(wy, N, N);
 
 if disp
     figure; imagesc(x,y,W(:,:,1));
-    axis xy image; colorbar;
-    xticks([]); 
-    yticks([]);
+    colormap gray;
+    colorbar; axis xy image;
+    title('VBJS weights in x direction')
+    h = xlabel('$x$');
+    xlim([min(x) max(x)]);
+    set(h,'interpreter','latex','fontsize',18);
+    h = ylabel('$y$');
+    set(h,'interpreter','latex','fontsize',18);
+    set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/weights_x');
 
     figure; imagesc(x,y,W(:,:,2));
-    axis xy image; colorbar;
-    xticks([]); 
-    yticks([]);
+    colormap gray;
+    colorbar; axis xy image;
+    h = xlabel('$x$');
+    xlim([min(x) max(x)]);
+    set(h,'interpreter','latex','fontsize',18);
+    h = ylabel('$y$');
+    set(h,'interpreter','latex','fontsize',18);
+    set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/weights_y');
 end
 
 % for now, just take the minimum of the weights (not sure
@@ -263,10 +267,16 @@ end
 W = min(W, [], 3);
 if disp
     figure; imagesc(x,y,W);
-    title('min weight from both');
-    axis xy image; colorbar;
-    xticks([]); 
-    yticks([]);
+    title('VBJS weights (minimum of x and y weights)');
+    colormap gray;
+    colorbar; axis xy image;
+    h = xlabel('$x$');
+    xlim([min(x) max(x)]);
+    set(h,'interpreter','latex','fontsize',18);
+    h = ylabel('$y$');
+    set(h,'interpreter','latex','fontsize',18);
+    set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/weights');
 end
 %% reconstructions
 
@@ -294,29 +304,13 @@ if disp
     imagesc(x,y,real(f_VBJS_wl1),dyn_range);
     axis xy image; colorbar;
     title('ADMM reconstruction')
-    xticks([]); 
-    yticks([]);
+    h = xlabel('$x$');
+    xlim([min(x) max(x)]);
+    set(h,'interpreter','latex','fontsize',18);
+    h = ylabel('$y$');
+    set(h,'interpreter','latex','fontsize',18);
+    set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/f_vbjs');
 end
-% %%
-% % VBJS wl2
-% opts_wl2.max_it = 100; 
-% opts_wl2.tol = 1e-10; 
-% opts_wl2.max_bt = 25; 
-% opts_wl2.delta = 1e-5; 
-% opts_wl2.rho = .4; 
-% opts_wl2.order = order; 
-% opts_wl2.tau = 1; 
-% opts_wl2.lam = 1; 
-% opts_wl2.disp = 0; 
-% opts_wl2.dyn_range = dyn_range; 
-% opts_wl2.f_init = A_mat\data_js; 
-% 
-% [f_VBJS_wl2,out_wl2] = grad_descent_mmv(A,AH,data_js,10*W/max(max(W)),[N,N],opts_wl2); 
-% 
-% figure; colormap gray
-% imagesc(x,y,real(f_VBJS_wl2),dyn_range);
-% axis xy image
-% xticks([]); 
-% yticks([]);
 
 end

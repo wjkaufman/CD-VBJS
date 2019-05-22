@@ -15,12 +15,29 @@ function [change, arrivalDeparture] = GLRT2D(x, y, isChanged, f_meas, f_VBJS, ..
 f_norm = f_meas - f_VBJS;
 
 if willDisp
-    figure; imagesc(real(f_norm(:,:,1)));
-        title('f_{norm} (first measurement)');
-        axis xy image; colorbar;
-    figure; imagesc(real(f_norm(:,:,size(f_norm, 3))));
-        title('f_{norm} (last measurement)');
-        axis xy image; colorbar;
+    figure; imagesc(x, y, real(f_norm(:,:,1)));
+    title('f_{norm} (first measurement)');
+    colormap gray;
+    colorbar; axis xy image;
+    h = xlabel('$x$');
+    xlim([min(x) max(x)]);
+    set(h,'interpreter','latex','fontsize',18);
+    h = ylabel('$y$');
+    set(h,'interpreter','latex','fontsize',18);
+    set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/f_norm_1');
+    
+    figure; imagesc(x,y,real(f_norm(:,:,size(f_norm, 3))));
+    title('f_{norm} (last measurement)');
+    colormap gray;
+    colorbar; axis xy image;
+    h = xlabel('$x$');
+    xlim([min(x) max(x)]);
+    set(h,'interpreter','latex','fontsize',18);
+    h = ylabel('$y$');
+    set(h,'interpreter','latex','fontsize',18);
+    set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/f_norm_J');
 end
 
 % matrix that records changed regions
@@ -66,11 +83,20 @@ for i = 1:(length(x)-nbhdSize + 1)
 end
 
 if willDisp
-    figure; imagesc(change); colorbar;
+    figure; imagesc(x,y,change); colorbar;
     title('Change statistic \gamma');
+    colormap gray;
+    colorbar; axis xy image;
+    h = xlabel('$x$');
+    xlim([min(x) max(x)]);
+    set(h,'interpreter','latex','fontsize',18);
+    h = ylabel('$y$');
+    set(h,'interpreter','latex','fontsize',18);
+    set(gca,'fontname','times','fontsize',16);
+    savefig('graphics/change_stat');
     
-    figure; imagesc(arrivalDeparture); colorbar;
-    title('Is arrival?');
+%     figure; imagesc(arrivalDeparture); colorbar;
+%     title('Is arrival?');
 end
 
 end
