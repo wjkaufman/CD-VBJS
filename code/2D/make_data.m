@@ -25,13 +25,12 @@ function [x, y, f, Y, SNR, ...
 % changeRegion: NxN logical for where the change actually was
 
 % true image
-numTargets = 64;
-f = get_img_pttarget(N, numTargets, 0);
-f_os = get_img_pttarget(os*N, numTargets, 0);
-% TODO fix this, this will make two different changed images...
-f_chg_os = get_img_pttarget(os*N, numTargets, .25);
-f_chg = get_img_pttarget(N, numTargets, .25); % change 25% of pt targets
-changeRegion = f_chg ~= 0; % changed region, simple for point target code
+numTargets = 10;
+f = get_img_pttarget(N, numTargets, 2, 0);
+f_os = imresize(f, os);
+f_chg = get_img_pttarget(N, numTargets, 2, .25);
+f_chg_os = imresize(f_chg, os);
+changeRegion = f_chg - f ~= 0; % changed region, simple for point target code
 dyn_range = [min(min(f)),max(max(f))];
 
 x = linspace(-1,1,N);

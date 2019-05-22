@@ -21,8 +21,8 @@ willDisp = true;
 
 % ROC curve generation
 iter = 2^2; % number of iterations to perform for the ROC curve
-numDetect = 2^4; % number of pixels in changed region to sample
-numFA = 2^4; % number of pixels in unchanged region to sample
+numDetect = 2^2; % number of pixels in changed region to sample
+numFA = 2^2; % number of pixels in unchanged region to sample
 T = 64; % number of threshold values to evaluate at (points along curve)
 thresh = reshape(linspace(0, 1, T), [1,1,T]);
 thresh = repmat(thresh, N, N, 1);
@@ -32,7 +32,7 @@ funct = 'hill';
 %(will use os^2 spatial values to inform every frequency value)
 os = 2^4;
 % level of underdeterminedness (fraction of data kept for analysis)
-underdetRatio = 1;
+underdetRatio = .95;
 std_noise = 0;
 
 % problem setup
@@ -43,17 +43,19 @@ std_noise = 0;
 
 %% GLRT CD
 
-[change, isArrival] = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, willDisp);
+nbhdSize = 5;
+
+[change, isArrival] = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, nbhdSize, willDisp);
 
 %figure; imagesc(change); colorbar;
 
 %%%%%
 
 % assume it's piecewise constant, so TV is sparse
-diffMat = -1 * eye(N);
-diffMat((N+1):N+1:end) = 1;
-diffMat(end,:) = zeros(1,N);
-L = diffMat;
+% diffMat = -1 * eye(N);
+% diffMat((N+1):N+1:end) = 1;
+% diffMat(end,:) = zeros(1,N);
+% L = diffMat;
 
 %% ROC generation
 
@@ -92,7 +94,7 @@ for i = 1:iter
     % IDT I need the following
 %     [Ghat] = vbjs_reconstruct(N, K, J, Jprime, x, Y, L, prefix, willDisp);
 
-    [change, isArrival] = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, false);
+    [change, isArrival] = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, nbhdSize, false);
     
     % isObsChanged is NxNxT logical matrix that records if pixel (i,j) is
     % measured as a change with threshold t

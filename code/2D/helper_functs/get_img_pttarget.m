@@ -1,4 +1,4 @@
-function [ f ] = get_img_pttarget(N, numTargets, changePct)
+function [ f ] = get_img_pttarget(N, numTargets, width, changePct)
 % N: dimension of image
 % numTargets: number of targets to include
 % changePct: rough percentage of targets to delete/move (0 is no changes)
@@ -24,10 +24,10 @@ for i=1:numTargets
         if 0.2 > rand()
             continue % don't put in target
         else
-            f(x+dx, y+dy) = 1;
+            f((x+dx):(x+dx+width-1), (y+dy):(y+dy+width-1)) = 1;
         end
     else
-        f(x,y) = 1;
+        f(x:(x+width-1),y:(y+width-1)) = 1;
     end
 end
 

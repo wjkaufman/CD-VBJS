@@ -66,7 +66,8 @@ for i = 1:(length(x)-nbhdSize + 1)
 end
 
 if willDisp
-    figure; imagesc(change); colorbar;
+    figure; imagesc(change);
+    colormap gray; axis xy image; colorbar;
     title('Change statistic \gamma');
     
     figure; imagesc(arrivalDeparture); colorbar;
