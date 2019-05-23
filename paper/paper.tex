@@ -2,7 +2,8 @@
 
 % TODO
 % - Clean up notation with N, K, k=-K,...,K (what am I actually doing in code?)
-% -
+% - Describe my proposed algorithm as "hybrid" (bc that's what it is)
+
 
 \documentclass{article}
 
@@ -19,9 +20,12 @@
 \maketitle
 
 
-% \begin{abstract}
-% This paper explored a new change detection (CD) algorithm that used variance based joint sparsity (VBJS) in conjunction with a generalized likelihood ratio test to improve robustness against noisy data and intentional misinformation. Several different cases using simulated data, including varying levels of noise and loss of original data, demonstrated good performance of the improved algorithm. However, the proposed CD algorithm did not perform well at the edges of the changed region, and also failed to accurately detect changes overall when the original Fourier data was lost randomly through the frequency domain.
-% \end{abstract}
+\begin{abstract}
+This paper explored a new change detection (CD) algorithm that used variance based joint sparsity (VBJS) in conjunction with a generalized likelihood ratio test to improve robustness against noisy data and fully utilize the information present in multiple measurement vectors. Several different cases using simulated data, including varying levels of noise and different types of signal changes, demonstrated good performance of the improved algorithm.
+% TODO write where algorithm failed (small changes relative to window size)
+% TODO what to do next
+However, the proposed CD algorithm did not perform well at the edges of the changed region, and also failed to accurately detect changes overall when the original Fourier data was lost randomly through the frequency domain.
+\end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -37,34 +41,38 @@ The comparison of reference and changed images using likelihood ratio testing (L
 
 \section{Problem statement}\label{sec:problem}
 
-For ease of presentation, only 1-dimensional, non-coherent images of the scene are described. The technique can be extended to two-dimensional images (as is considered in the numerical experiments presented) as well as coherent data. Let $f: [-1,1] \to \R$ be a piecewise smooth function representing the scene of interest. The Fourier coefficients $\{\hat{f}_k\}_{k=-K}^{K}$ of $f$ are observed for a single measurement vector $\hat{\mathbf{f}}_j = [\hat{f_{0,j}}, \hat{f_{1,j}}, \dots]^\top$, and a total of $J$ measurement vectors are observed of the scene. The first $J'$ vectors are ``reference images'' in which the scene has not changed, and the last $J-J'$ images are ``changed images'' in which the scene has changed.
+For ease of presentation, only 1-dimensional, non-coherent (i.e. real-valued) images of the scene are described below. The technique can be extended to two-dimensional images (as is considered in the numerical experiments presented) as well as coherent data. Let $f: [-1,1] \to \R$ be a piecewise smooth function representing the scene of interest. The Fourier coefficients $\{\hat{f}_k\}_{k=-K}^{K}$ of $f$ are observed for a single measurement vector $\hat{\mathbf{f}}_j = [\hat{f_{0,j}}, \hat{f_{1,j}}, \dots]^\top$, and a total of $J$ measurement vectors are observed of the scene. The first $J'$ vectors are ``reference images'' in which the scene has not changed, and the last $J-J'$ images are ``changed images'' in which the scene has changed.
 The matrix $\hat{F} \in \C^{K \times J}$ is then all the data gathered from the scene, composed of the column vectors $\hat{\mathbf{f}}_j$.
 
 From $\hat{F}$, we wish to determine which spatial locations of a scene have changed from the reference state to the changed state. We can do so by finding a change statistic $\gamma: [-1,1] \to \{0, 1\}$ where $\gamma=0$ if there was no change and $\gamma = 1$ if there was a change.
 
-%See figure~\ref{fig:yhat} for a plot of a toy function. $J=10$ images were studied, where the first $J'=5$ images were reference images consisting of a top hat function. The last $5$ images were changed images, where the middle of the top hat was depressed slightly.
+To study the problem numerically and understand how the algorithm behaves under various conditions, a two-dimensional scene was simulated. See figure~\ref{fig:f} for a plot of the reference image, and figure~\ref{fig:f_chg} for a plot of the changed scene. The change is simply an increase in intensity values for a small rectangle in the image domain.
 
-%\begin{figure}[H]
-%    \centering
-%    \includegraphics[width=0.7\textwidth]{noise_1e-3-yhat-N_100-K_40-J_10.pdf}
-%    \caption{A toy function used to evaluate the CD algorithm.}
-%    \label{fig:yhat}
-%\end{figure}
+\begin{figure}[H]
+   \centering
+   \includegraphics[width=0.7\textwidth]{01/f.pdf}
+   \caption{The reference image used in the numerical experiments to study and evaluate the CD algorithm.}
+   \label{fig:f}
+\end{figure}
 
-%A perfect CD algorithm would identify the interval $[-.25, .25]$ in figure~\ref{fig:yhat} as changed ($\gamma=1$), and the rest of the domain as unchanged ($\gamma=0$).
+\begin{figure}[H]
+   \centering
+   \includegraphics[width=0.7\textwidth]{01/f_chg.pdf}
+   \caption{The changed image used in the numerical experiments.}
+   \label{fig:f_chg}
+\end{figure}
+
+A perfect CD algorithm would identify the rectangle $x \in [-0.75,-0.65], y \in [-0.1, 0]$ in figure~\ref{fig:f_chg} as changed ($\gamma=1$), and the rest of the domain as unchanged ($\gamma=0$).
 
 \section{Methods}
 
 The two major components of the proposed algorithm studied were variance based joint sparsity recovery (VBJS) and a generalized likelihood-ratio test (GLRT) for change detection. The two techniques are discussed separately below, then the proposed algorithm that uses both methods is presented.
 
-% TODO write a short motivation for _why_ we're doing this
-% why use VBJS? (good for MMV, multi-pass)
-% conc factors (comp. efficient)
-% hypothesis testing (CD)
+VBJS more effectively utilizes the information present in multiple measurements of a signal, thereby better estimating the underlying signal even in the presence of noise or intentional misinformation. The high-level goal of this research is to identify whether GLRT CD algorithms can be improved by implementing VBJS when multiple measurements of a scene are observed.
 
 \subsection{Variance based joint sparsity}\label{subsec:vbjs}
 
-As presented in~\cite{gelb_2018}, VBJS uses the information contained in the joints sparsity of multiple measurement vectors (MMVs) to reconstruct an approximation $\hat{g}$ of the original signal $f$. The VBJS algorithm is presented below.
+As presented in~\cite{gelb_2018}, VBJS uses the information contained in the joints sparsity of multiple measurement vectors (MMVs) to reconstruct an approximation $\tilde{f}$ of the original signal $f$. The VBJS algorithm is presented below.
 
 \begin{enumerate}
     \item Recover individual reconstructions of the scene in a sparse domain $P \in \C^{N\times J}$, containing $J$ reconstructions of the scene with $N$ values for each reconstruction.
@@ -77,7 +85,7 @@ As presented in~\cite{gelb_2018}, VBJS uses the information contained in the joi
     \end{cases}
     \end{equation}
     where $C$ is the average $l_1$ norm across all measurements of the normalized sparse measurements (see~\cite{gelb_2018} for a more detailed explanation).
-    \item Solve weighted $l_1$ regularization problem to recover $\hat{g}$.
+    \item Solve weighted $l_1$ regularization problem to recover $\tilde{f}$.
 \end{enumerate}
 
 \subsection{Concentration factors and jump function approximations}
@@ -98,10 +106,7 @@ which is equivalent to the inverse discrete Fourier transform where the Fourier 
 
 Once $P$ is calculated, the VBJS algorithm from~\ref{subsec:vbjs} can be completed by calculating the variance of $P$ for each spatial point across the $J$ measurements, and then determining the weights
 
-When using concentration factors in two or more dimensions, the procedure above is applied to each spatial dimension separately. The matrix $P$ is then an $N \times J \times D$ complex matrix, where $D$ is the number of dimensions. % TODO talk about VBJS weights then...
-
-
-
+When using concentration factors in two or more dimensions, the procedure above is applied to each spatial dimension separately. The matrix $P$ is then an $N \times J \times D$ complex matrix, where $D$ is the number of dimensions of the image. The VBJS weights are calculated using $P$ for each dimension separately, then the minimum of all weights is taken at each spatial point.
 
 \subsection{Generalized likelihood-ratio test (GLRT)}
 
@@ -112,45 +117,228 @@ The hypothesis testing approach improves on both methods. Two hypotheses are con
     \text{LRT} = \frac{P(Y | H_0)}{P(Y | H_1)}
 \end{equation}
 
-By assuming the data are zero-mean Gaussian random variables, we can compute the generalized LRT (GLRT) from the covariance matrices under $H_0$ and $H_1$
-
+By assuming the data $Y$ are zero-mean Gaussian random variables, we can compute the generalized LRT (GLRT) from the covariance matrices under $H_0$ and $H_1$
 \begin{equation}\label{eq:glrt}
-    \text{GLRT}^{1/J}_{\mathcal{N}} = \frac{
-        \left|\frac{1}{J'} \sum_{j=1}^{J'} \sum_{i \in \mathcal{N}}
-                    Y_{ij}Y_{ij}^\dagger \right|^{J'} % ref scene
-        \left|\frac{1}{J-J'} \sum_{j=J'+1}^{J} \sum_{i \in \mathcal{N}}
-                    Y_{ij}Y_{ij}^\dagger \right|^{J-J'}}% changed scene
-        {\left|\frac{1}{J} \sum_{j=1}^J \sum_{i \in \mathcal{N}}
-                    Y_{ij}Y_{ij}^\dagger \right|^J} % null hypothesis
+    \text{GLRT}^{1/n}_{\mathcal{N}} = \frac{
+        \left|\frac{1}{nJ'} \sum_{j=1}^{J'} \sum_{i \in \mathcal{N}}
+                    Y_{ij}Y_{ij}^\dagger \right|^{J'/2} % ref scene
+        \left|\frac{1}{n(J-J')} \sum_{j=J'+1}^{J} \sum_{i \in \mathcal{N}}
+                    Y_{ij}Y_{ij}^\dagger \right|^{(J-J')/2}}% changed scene
+        {\left|\frac{1}{nJ} \sum_{j=1}^J \sum_{i \in \mathcal{N}}
+                    Y_{ij}Y_{ij}^\dagger \right|^{J/2}} % null hypothesis
 \end{equation}
-
-Then construct the change statistic $\gamma_\mathcal{N}$ by
+where $n = |\mathcal{N}|$ is the number of pixels in the neighborhood. Then construct the change statistic $\gamma_\mathcal{N}$ by
 \begin{equation}
-    \gamma = \left[ 1-\text{GLRT}^{1/N} \right] > \tau
+    \gamma_\mathcal{N} = \left[ 1-\text{GLRT}^{1/n}_{\mathcal{N}} \right] > \tau
 \end{equation}
-where $\tau$ is a threshold value.
+where $\tau \in [0,1]$ is a threshold.
 
 The generalized likelihood-ratio test is more robust than intensity difference or ratio statistics, because the relative intensity values does not affect the change statistic. In addition, the GLRT method can be extended to include coherent change detection, where the phase is assumed to be drawn from a circular Gaussian (see~\cite{Ash_2014}). Finally, the GLRT method can take into account MMVs, either multiple reference images or multiple changed images, to improve the algorithm's accuracy.
 
 \subsection{Improving GLRT with VBJS}
 
-Although the GLRT can include data from MMVs, it only does so when calculating the sample covariances in (\ref{eq:glrt}). Furthermore, this fails to take into account the information present in the joint sparsity of the MMVs, and does not prevent intentional misinformation from affecting the algorithm. To improve the current GLRT algorithm, the VBJS method is used to reconstruct the ``best'' reference image $\hat{g}$, which is then used to calculate a new set of vectors $G_\text{norm}$ to use in the GLRT. The steps of the procedure are given below.
+Although the GLRT can include data from MMVs, it only does so when calculating the sample covariances in (\ref{eq:glrt}). Furthermore, this fails to take into account the information present in the joint sparsity of the MMVs, and does not prevent intentional misinformation from affecting the algorithm. To improve the current GLRT algorithm, the VBJS method is used to reconstruct the ``best'' reference image $\tilde{f}$, which is then used to calculate a new set of vectors $F_\text{norm}$ to use in the GLRT. The steps of the procedure are given below.
 
 \begin{enumerate}
-    \item Reconstruct the ``best'' reference vector $\hat{g}$ using VBJS from the individual reconstructions $Y$.
-    \item Calculate the set of vectors $G_\text{norm} = Y - \hat{g}$. $G_\text{norm}$ captures random noise in reference images, or legitimate changes in changed images.
-    \item Perform regular CD on $G_\text{norm}$, where the $Y$ values in (\ref{eq:glrt}) are replaced with the corresponding values in $G_\text{norm}$.
+    \item Reconstruct the ``best'' reference vector $\tilde{f}$ using VBJS from the individual reconstructions $Y$.
+    \item Calculate the set of vectors $F_\text{norm} = Y - \tilde{f}$. $F_\text{norm}$ captures random noise in reference images, or legitimate changes in changed images.
+    \item Perform regular CD on $F_\text{norm}$, where the $Y$ values in (\ref{eq:glrt}) are replaced with the corresponding values in $F_\text{norm}$.
 \end{enumerate}
 
-Calculating $G_\text{norm}$ satisfies the underlying assumption of the GLRT that the data are drawn from a \emph{zero-mean} distribution. However, this method relies on the assumption that the residual noise captured in $G_\text{norm}$ is normally distributed, which may not be the case given the non-linear optimization process implemented in VBJS.
+Calculating $F_\text{norm}$ satisfies the underlying assumption of the GLRT that the data are drawn from a \emph{zero-mean} distribution. However, this method relies on the assumption that the residual noise captured in $F_\text{norm}$ is normally distributed, which may not be the case given the non-linear optimization process implemented in VBJS.
 
 \section{Results}
 
-% TODO actually fill in when I get here
+The performance of the proposed algorithm was evaluated using receiver-operator curves (ROC), where the probability of a true detection of a change is plotted against the probability of a false detection. Several parameters were investigated to evaluate the algorithm: varying levels of noise, size of the changed region, and the number of measurements made on the scene.
+
+\subsection{Noisy measurements}
+
+Measurements on actual signals always have some degree of noise. To understand the impact of varying levels of noise on the algorithm's performance, normally distributed additive noise was added to the Fourier measurements made on the scene. The level of noise was quantified by the signal to noise ratio (SNR), which is defined by
+\[
+\text{SNR} = \log\left( \sum |y|^2 \right) - \log\left( \sum |\eta|^2 \right)
+\]
+where $y$ is the underlying signal and $\eta$ is the noise in the measurement. For this paper, the underlying signal was the Fourier data $\hat{F}$ measured on the scene, and the additive noise $\eta$ was known. For the numerical experiment, SNR values from $-6$ to $-36$ were tested.
+
+To begin, the low-noise regime was investigated. Using $J=5$ total measurements with $J'=3$ measurements of the reference scene, a noise level of $\text{SNR}=-6.3$ was generated using the function from~\ref{fig:f}. See figure~\ref{fig:f_vbjs} for the VBJS reconstruction of the reference image.
+
+\begin{figure}[H]
+   \centering
+   \includegraphics[width=0.7\textwidth]{01/f_vbjs.pdf}
+   \caption{The VBJS reconstruction of the reference image, using the first $J'$ measurements of the scene. $\text{SNR} = -6.3$.}
+   \label{fig:f_vbjs}
+\end{figure}
+
+Once the VBJS reconstruction was calculated, the zero-mean data $F_\text{norm}$ were calculated. See figure~\ref{fig:f_norm} for both the reference and changed scenes.
+
+\begin{figure}[H]
+   \centering
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{01/f_norm_1.pdf}
+   \end{subfigure}%
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{01/f_norm_J.pdf}
+   \end{subfigure}%
+   \caption{The images for $F_\text{norm}$, for both the reference scene measurement and the changed scene measurement. $\text{SNR} = -6.3$.}
+   \label{fig:f_norm}
+\end{figure}
+
+Finally, using $F_\text{norm}$, the GLRT is performed, and the change statistic is calculated (see figure~\ref{fig:change_stat}).
+
+\begin{figure}[H]
+   \centering
+   \includegraphics[width=0.7\textwidth]{01/change_stat.pdf}
+   \caption{The change statistic for a low-noise regime. $\text{SNR} = -6.3$.}
+   \label{fig:change_stat}
+\end{figure}
+
+$64$ iterations of the algorithm were run to generate the following ROCs. Points were picked randomly both within and outside the changed region to determine the true detection and false alarm probabilities. See figure~\ref{fig:roc_01} for the ROCs associated with the low-noise regime.
+
+\begin{figure}[H]
+   \centering
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{01/ROC_1.pdf}
+   \end{subfigure}%
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{01/ROC_2.pdf}
+   \end{subfigure}%
+   \caption{The ROCs for a low-noise regime. $\text{SNR} = -6.3$.}
+   \label{fig:roc_01}
+\end{figure}
+
+Notice that the ROCs behave as desired--the probability of accurately detecting a change rises as the threshold $\tau$ increases, and the probability of false alarm remains very low until $\tau$ approaches $1$.
+
+In contrast, a noise level of $\text{SNR} = -24.3$ was used to examine the medium-noise regime. See figure~\ref{fig:f_vbjs_med} for the VBJS reconstruction with higher levels of noise.
+
+\begin{figure}[H]
+   \centering
+   \includegraphics[width=0.7\textwidth]{04/f_vbjs.pdf}
+   \caption{The VBJS reconstruction of the reference image, using the first $J'$ measurements of the scene. $\text{SNR} = -24.3$.}
+   \label{fig:f_vbjs_med}
+\end{figure}
+
+Notice that the resulting reconstruction of the reference scene is noisier, but the low-frequency features are still preserved in the reconstruction. See figure~\ref{fig:f_norm_med} for the resulting $F_\text{norm}$ measurements.
+
+\begin{figure}[H]
+   \centering
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{04/f_norm_1.pdf}
+   \end{subfigure}%
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{04/f_norm_J.pdf}
+   \end{subfigure}%
+   \caption{The images for $F_\text{norm}$, for both the reference scene measurement and the changed scene measurement. $\text{SNR} = -24.3$.}
+   \label{fig:f_norm_med}
+\end{figure}
+
+As before, $64$ iterations were run to generate the ROCs (see figure~\ref{fig:roc_04}). Notice that, in comparing to figure~\ref{fig:roc_01}, the ROCs show imperfect performance of the algorithm, where the probability of false alarms is non-zero for the probability of true detection less than $1$.
+
+\begin{figure}[H]
+   \centering
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{04/ROC_1.pdf}
+   \end{subfigure}%
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{04/ROC_2.pdf}
+   \end{subfigure}%
+   \caption{The ROCs for a medium-noise regime. $\text{SNR} = -24.3$.}
+   \label{fig:roc_04}
+\end{figure}
+
+Although not perfect, the ROC demonstrates strong performance of the CD algorithm, the high level of noise present in the measurements.
+
+Finally, the level of noise was increased until the algorithm's performance worsened considerably. This was achieved at a noise level of $\text{SNR}=-36.4$. See figure~\ref{fig:f_norm_high} for the $F_\text{norm}$ measurements, and figure~\ref{fig:roc_06} for the corresponding ROCs.
+
+\begin{figure}[H]
+   \centering
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{06/f_norm_1.pdf}
+   \end{subfigure}%
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{06/f_norm_J.pdf}
+   \end{subfigure}%
+   \caption{The images for $F_\text{norm}$, for both the reference scene measurement and the changed scene measurement. $\text{SNR} = -36.4$.}
+   \label{fig:f_norm_high}
+\end{figure}
+
+\begin{figure}[H]
+   \centering
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{06/ROC_1.pdf}
+   \end{subfigure}%
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{06/ROC_2.pdf}
+   \end{subfigure}%
+   \caption{The ROCs for a high-noise regime. $\text{SNR} = -36.4$.}
+   \label{fig:roc_06}
+\end{figure}
+
+Comparing the ROCs (figures~\ref{fig:roc_01}, \ref{fig:roc_04}, \ref{fig:roc_06}), higher levels of noise negatively impacts the algorithm's performance, as expected. At the highest noise level, the algorithm performed little better than randomly guessing whether a given pixel was changed or not. However, the algorithm did appear to be robust against relatively high levels of noise, suggesting that the hybrid method of performing a VBJS reconstruction before the GLRT CD algorithm may be effective.
+
+\subsection{Size of change}
+
+In addition to the effects of noise on the CD algorithm's performance, the relative size of the changed region was studied. In the above experiments varying noise levels, the changed region was larger than the neighborhood $\mathcal{N}$ used in the GLRT, which was a square region of $5 \times 5$ pixels.
+
+Figure~\ref{fig:roc_07} presents the ROCs for a changed region of the same size as the neighborhood $\mathcal{N}$ (i.e. a $5\times 5$ region).
+
+\begin{figure}[H]
+   \centering
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{07/ROC_1.pdf}
+   \end{subfigure}%
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{07/ROC_2.pdf}
+   \end{subfigure}%
+   \caption{The ROCs for a large changed region ($5\times 5$ pixel region). $\text{SNR} = -24.4$.}
+   \label{fig:roc_07}
+\end{figure}
+
+And finally, the changed region was modified to be a $2\times 2$ pixel region, smaller than the neighborhood used in the GLRT. See figure~\ref{fig:roc_10} for the associated ROCs.
+
+\begin{figure}[H]
+   \centering
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{10/ROC_1.pdf}
+   \end{subfigure}%
+   \begin{subfigure}{0.5\textwidth}
+       \centering
+       \includegraphics[width=\textwidth]{10/ROC_2.pdf}
+   \end{subfigure}%
+   \caption{The ROCs for a small changed region ($2 \times 2$ pixel region). $\text{SNR} = -24.4$.}
+   \label{fig:roc_10}
+\end{figure}
+
+The worse performance for a smaller changed region is expected, and further investigation into small-region change detection could prove insightful.
+
+%\subsection{Number of measurements made}
+% TODO get simulation data, write up, continue!!!
+% might not have time to fill this in though...
 
 \section{Conclusion}
 
-% TODO fill in once I write up results...
+This research explored the possible improvements of GLRT CD algorithms by leveraging VBJS techniques for multiple measurements of a scene. The hybrid algorithm performed very well even with high levels of noise, indicating that the information of the underlying scene was being used even as individual measurements were noisy. Additionally, the algorithm performed well for changes that were larger of of the same size as the neighborhood of pixels $\mathcal{N}$ used in the GLRT. For smaller changes, the algorithm did not perform well.
+
+For future investigations, it may be beneficial to apply the algorithm to complex data, which includes both intensity and phase information from the scene. This type of data is common in applications such as synthetic aperture radar (SAR). Further exploration into small-region change detection would also prove useful, and understanding how the size of $\mathcal{N}$ should be chosen.
+Finally, varying the number of measurements $J$ and relative number of reference and changed images ($J', J-J'$) would be helpful to better understand how the algorithm performs under different conditions.
+
+\section{Acknowledgements}
+
+I would like to thank Professor Gelb for being extraordinarily helpful and patient throughout the research process, both in the progress of research findings and in furthering my own understanding of signal processing and applied mathematics.
+
 
 \bibliography{bib.bib}
 \bibliographystyle{ieeetr}

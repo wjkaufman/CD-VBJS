@@ -6,10 +6,23 @@ close all;
 addpath('helper_functs');
 
 %% define parameters of run
+% iter: number of iterations to perform for the ROC curve
+% numDetect: number of pixels in changed region to sample
+% numFA: number of pixels in unchanged region to sample
+% T: number of threshold values to evaluate at (points along curve)
+% os: spatial oversampling ratio, (will use os^2 spatial values to
+%   inform every frequency value)
 
 N = 128;
 J = 5;
 Jprime = 3;
+iter = 2^6; 
+numDetect = 4; 
+numFA = 8;
+T = 64; 
+os = 2^4; 
+std_noise = 4;
+
 isChanged = false(1, J); % 1xJ vector that indicates whether measurement
     % is of a "changed" scene
 isChanged((Jprime+1):end) = true;
@@ -20,17 +33,10 @@ order = 2;
 willDisp = true;
 
 % ROC curve generation
-iter = 2^1; % number of iterations to perform for the ROC curve
-numDetect = 8; % number of pixels in changed region to sample
-numFA = 8; % number of pixels in unchanged region to sample
-T = 64; % number of threshold values to evaluate at (points along curve)
+
 thresh = reshape(linspace(0, 1, T), [1,1,T]);
 thresh = repmat(thresh, N, N, 1);
 funct = 'hill';
-
-os = 2^4; % spatial oversampling ratio 
-        %(will use os^2 spatial values to inform every frequency value)
-std_noise = .5;
 
 %% problem setup
 
@@ -93,13 +99,8 @@ for i = 1:iter
     
     [x,y,f,Y,SNR, f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, ...
     Jprime, funct, order, os, std_noise, false);
-    % below is what I had before for the 1D case
-%     [~, ~, ~, Y] = make_data(ref_func, chg_func, N, K, J, Jprime, ...
-%         noise, M, prefix, false);
+    disp(['Signal to noise ratio is ' num2str(SNR)]);
     
-    % IDT I need the following
-%     [Ghat] = vbjs_reconstruct(N, K, J, Jprime, x, Y, L, prefix, willDisp);
-
     [change, isArrival] = GLRT2D(x, y, isChanged, f_meas, f_VBJS_wl1, 5, false);
     
     % isObsChanged is NxNxT logical matrix that records if pixel (i,j) is

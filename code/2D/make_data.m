@@ -1,12 +1,12 @@
 function [x, y, f, Y, SNR, ...
     f_jump, f_meas, f_VBJS_wl1, changeRegion] = make_data(N, J, Jprime, ...
-                                    funct, order, os, std_noise, disp)
+                                    funct, order, os, std_noise, willDisp)
 % returns noisy data with changes, and optionally prints graphs to files
 %
 % funct: string that determines function type
 % os: oversampling ratio to determine Fourier coefficients
 % std_noise: standard deviation of noise in frequency domain
-% disp: boolean (to display plots)
+% willDisp: boolean (to display plots)
 %
 % outputs
 % x/y: spatial gridpoints on which measurements are made
@@ -28,9 +28,9 @@ y = linspace(-1,1,N);
 x_os = linspace(-1,1,os*N);
 y_os = linspace(-1,1,os*N);
 
-if disp
+if willDisp
     figure;
-    imagesc(x,y,f,dyn_range);
+    imagesc(x,y,f,dyn_range); title('True reference image');
     colormap gray;
     colorbar; axis xy image;
     h = xlabel('$x$');
@@ -50,8 +50,8 @@ noise_os = std_noise*randn(os*N,os*N,J);
 %F_CHGD = zeros(N,N,J);
 F_CHGD_os = zeros(os*N,os*N,J);
 % make consistent change for last J-Jprime measurements
-u = -.75; du = .1;
-v = -.1; dv = .1;
+u = -.75; du = .031;
+v = -.1; dv = .031;
 [X,Y] = meshgrid(x,y);
 % define where the change region is
 changeRegion = (X >= u & X <= (u+du) & Y >= v & Y <= (v+dv));
@@ -65,9 +65,9 @@ F_CHGD_os(:,:,(Jprime+1):J) = repmat(f_chgd_os, 1, 1, J-Jprime);
 % make change in the first Jprime (so that the "change" is a removal)
 % F_CHGD_os(:,:,1:Jprime) = repmat(f_chgd_os, 1, 1, Jprime);
 
-if disp
-    figure(); colormap gray;
-    imagesc(x,y,f_chgd+f,dyn_range);
+if willDisp
+    figure(); colormap gray; 
+    imagesc(x,y,f_chgd+f,dyn_range); title('True changed image');
     colorbar; axis xy image;
     h = xlabel('$x$');
     xlim([min(x) max(x)]);
@@ -111,7 +111,7 @@ l_mat = repmat(l_vals, 1, N);
 PAf_meas = zeros(N,N,J);
 PAf_meas_vec = zeros(N^2,J);
 SNR = zeros(1,J);
-if disp
+if willDisp
     figure; plot(x,f(:,N/2),'k--','linewidth',1.25); hold on;
 end
 for ii = 1:J
@@ -132,7 +132,7 @@ for ii = 1:J
     % old code (TODO still need?)
     PAf_meas(:,:,ii) = real(PA*f_star + f_star*PA);
     PAf_meas_vec(:,ii) = col(PAf_meas(:,:,ii));
-    if disp
+    if willDisp
         plot(x,f_meas(N/2,:,ii),'linewidth',1.25);
     end
     
@@ -152,7 +152,7 @@ end
 
 SNR = mean(SNR, 'all');
 
-if disp
+if willDisp
     h = xlabel('$x$');
     xlim([min(x) max(x)]);
     set(h,'interpreter','latex','fontsize',18);
@@ -167,7 +167,7 @@ end
 % measurement vectors: if same sign -> keep value
 % if different sign -> set jump to 0
 
-if disp
+if willDisp
     % plot jump function
     figure; colormap gray;
     imagesc(x,y,f_jump(:,:,J,1));
@@ -215,9 +215,9 @@ data_js = Y(:,:,j_star);
 v = var(f_jump,1,3);
 %v = reshape(v,N,N); 
 
-if disp
+if willDisp
     % plot variance in x direction
-    figure; imagesc(x,y,v(:,:,1)); title('variance in x direction');
+    figure; imagesc(x,y,v(:,:,1)); title('Variance of x jump function');
     colormap gray; colorbar; axis xy image;
     h = xlabel('$x$');
     xlim([min(x) max(x)]);
@@ -235,7 +235,7 @@ W = zeros(N,N, 2);
 W(:,:,1) = reshape(wx, N, N);
 W(:,:,2) = reshape(wy, N, N);
 
-if disp
+if willDisp
     figure; imagesc(x,y,W(:,:,1));
     colormap gray;
     colorbar; axis xy image;
@@ -265,7 +265,7 @@ end
 % TODO figure this out!
 
 W = min(W, [], 3);
-if disp
+if willDisp
     figure; imagesc(x,y,W);
     title('VBJS weights (minimum of x and y weights)');
     colormap gray;
@@ -298,7 +298,7 @@ opts_wl1.order = order;
 [f_VBJS_wl1,~] = ADMM2(A,AH,data_js,[N,N],opts_wl1);
 % not storing out_wl1 (second output)
 
-if disp
+if willDisp
     figure;
     colormap gray
     imagesc(x,y,real(f_VBJS_wl1),dyn_range);
